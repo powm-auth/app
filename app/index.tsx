@@ -10,8 +10,16 @@ import {
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  Animated,
+  ImageBackground,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -46,13 +54,34 @@ export default function HomeScreen() {
     }
   };
 
+  // Ouvre l’écran de scan (si tu as créé /scan.tsx)
   const openScanner = () => {
-    router.push('/scan');
+    router.push('/scan' as any);
   };
+
+  // Swipe gauche/droite : History ⇄ Home ⇄ Profile
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) => {
+        const { dx, dy } = gesture;
+        return Math.abs(dx) > 20 && Math.abs(dy) < 10; // uniquement gestes horizontaux
+      },
+      onPanResponderRelease: (_evt, gesture) => {
+        const { dx } = gesture;
+        if (dx < -50) {
+          // swipe gauche -> page à droite : Profile
+          router.push('/profile' as any);
+        } else if (dx > 50) {
+          // swipe droite -> page à gauche : History
+          router.push('/history' as any);
+        }
+      },
+    })
+  ).current;
 
   return (
     <BackgroundImage>
-      <View style={styles.container}>
+      <View style={styles.container} {...panResponder.panHandlers}>
         {/* Overlay to close notification popup */}
         {showNotifications && <Pressable style={styles.overlay} onPress={toggleNotifications} />}
 
@@ -66,7 +95,7 @@ export default function HomeScreen() {
             <View style={{ width: 48, height: 48 }} />
           </Row>
 
-          {/* QR Code Scanner Card (press -> scanner) */}
+          {/* QR Code Scanner Card */}
           <Pressable onPress={openScanner} style={styles.qrCardPressable}>
             <ImageBackground
               source={require('@/assets/powm/illustrations/powm_draw.png')}
@@ -100,7 +129,7 @@ export default function HomeScreen() {
           <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
             <PowmText variant="subtitle">ID Tickets</PowmText>
 
-            {/* Scan an ID Ticket -> ouvre aussi le scanner */}
+            {/* Scan an ID Ticket */}
             <Card onPress={openScanner} style={styles.scanTicketCard} variant="alt">
               <Row gap={powmSpacing.base} align="center">
                 <View style={[styles.ticketIcon, { backgroundColor: powmColors.scanButtonBg }]}>
@@ -132,7 +161,7 @@ export default function HomeScreen() {
 
             {/* Create an ID Ticket */}
             <Card
-              onPress={() => router.push('/create-ticket')}
+              onPress={() => router.push('/create-ticket' as any)}
               style={styles.ticketCard}
               variant="alt"
             >
@@ -242,14 +271,14 @@ const styles = StyleSheet.create({
   notificationText: {
     textAlign: 'center',
   },
-
-  // --- QR card & scanner ---
   qrCardPressable: {
     marginBottom: powmSpacing.xl,
     borderRadius: powmRadii.md,
     overflow: 'hidden',
   },
   qrCard: {
+    borderRadius: powmRadii.md,
+    overflow: 'hidden',
     backgroundColor: powmColors.mainBackgroundAlt,
   },
   qrCardImage: {
@@ -277,7 +306,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   ticketsSection: {
     marginBottom: powmSpacing.xxl,
   },

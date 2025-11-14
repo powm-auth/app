@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
 import { powmColors } from '@/theme/powm-tokens';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
 /**
@@ -18,7 +18,10 @@ export default function RootLayout() {
           contentStyle: {
             backgroundColor: powmColors.mainBackground,
           },
-          animation: 'fade',
+          // Animation horizontale au lieu du fade
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+          gestureDirection: 'horizontal',
         }}
       >
         <Stack.Screen name="index" />
