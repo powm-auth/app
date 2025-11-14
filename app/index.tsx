@@ -6,6 +6,7 @@ import {
   PowmIcon,
   PowmText,
   Row,
+  TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
@@ -118,31 +119,19 @@ export default function HomeScreen() {
           </Card>
 
           {/* Name Ticket */}
-          <Card
-            onPress={() => console.log('Name ticket')}
+          <TicketCard
+            icon={{
+              name: 'powmLogo',
+              backgroundColor: powmColors.electricFade,
+              color: powmColors.electricMain,
+              size: 48,
+            }}
+            title="Name"
+            subtitle="First and Lastname Proof"
+            showSeeButton
+            onSeePress={() => console.log('See Name ticket')}
             style={styles.ticketCard}
-            variant="alt"
-          >
-            <Row gap={powmSpacing.base} align="center" justify="space-between">
-              <Row gap={powmSpacing.base} align="center" flex={1}>
-                <View style={[styles.ticketIcon, { backgroundColor: powmColors.electricFade }]}>
-                  <PowmIcon name="powmLogo" size={48} color={powmColors.electricMain} />
-                </View>
-                <Column flex={1} gap={powmSpacing.xs}>
-                  <PowmText variant="subtitleSemiBold">Name</PowmText>
-                  <PowmText variant="text" color={powmColors.inactive}>
-                    First and Lastname Proof
-                  </PowmText>
-                </Column>
-              </Row>
-              <Row gap={4} align="center">
-                <PowmText variant="text" color={powmColors.activeElectricMain}>
-                  see
-                </PowmText>
-                <PowmIcon name="qrcode" size={14} color={powmColors.activeElectricMain} />
-              </Row>
-            </Row>
-          </Card>
+          />
 
           {/* Create an ID Ticket */}
           <Card

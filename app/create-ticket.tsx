@@ -9,7 +9,7 @@ import {
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Animated, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Easing, ImageBackground, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -57,16 +57,17 @@ export default function CreateTicketScreen() {
   const toggleTicketView = () => {
     if (!showTicket) {
       setShowTicket(true);
-      Animated.spring(ticketAnimation, {
+      Animated.timing(ticketAnimation, {
         toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
-        tension: 80,
-        friction: 12,
       }).start();
     } else {
       Animated.timing(ticketAnimation, {
         toValue: 0,
         duration: 300,
+        easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }).start(() => setShowTicket(false));
     }
@@ -74,7 +75,7 @@ export default function CreateTicketScreen() {
 
   const ticketTranslateY = ticketAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [150, 0],
+    outputRange: [200, 0],
   });
 
   // Generate random ticket ID (placeholder)
@@ -132,10 +133,7 @@ export default function CreateTicketScreen() {
           </>
         )}
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
-        >
+        <View style={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}>
           {/* Close Button */}
           <Pressable style={styles.closeButton} onPress={() => router.replace('/')}>
             <PowmIcon name="cross" size={24} color={powmColors.white} />
@@ -183,24 +181,21 @@ export default function CreateTicketScreen() {
           <Card onPress={handleCreateTicket} style={styles.createButton} variant="alt">
             <Row gap={powmSpacing.base} align="center">
               <View style={[styles.createButtonIcon, { backgroundColor: powmColors.electricFade }]}>
-                <PowmIcon name="check" size={32} color={powmColors.electricMain} />
+                <PowmIcon name="check" size={40} color={powmColors.electricMain} />
               </View>
               <Column flex={1} gap={powmSpacing.xs}>
                 <PowmText variant="subtitleSemiBold">Create this ticket</PowmText>
               </Column>
             </Row>
           </Card>
-
-          {/* Spacer for bottom ticket card */}
-          <View style={{ height: 200 }} />
-        </ScrollView>
+        </View>
 
         {/* Ticket Preview Card (bottom) */}
         <Animated.View
           style={[
             styles.ticketPreview,
             {
-              transform: [{ translateY: showTicket ? 0 : ticketTranslateY }],
+              transform: [{ translateY: ticketTranslateY }],
             },
           ]}
         >
@@ -253,9 +248,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
     zIndex: 998,
-  },
-  scrollView: {
-    flex: 1,
   },
   content: {
     paddingHorizontal: powmSpacing.lg,

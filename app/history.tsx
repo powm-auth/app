@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  PowmText,
-  PowmIcon,
-  Card,
-  Row,
-  Column,
-  FootBar,
   BackgroundImage,
+  FootBar,
+  PowmIcon,
+  PowmText,
+  Row,
+  TicketCard,
 } from '@/components/powm';
-import { powmColors, powmSpacing, powmRadii } from '@/theme/powm-tokens';
+import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * History/Activity Screen
@@ -130,50 +129,39 @@ export default function HistoryScreen() {
         )}
 
         {/* Activity List */}
-        <Column gap={powmSpacing.xs} style={styles.activityList}>
+        <View style={styles.activityList}>
           {MOCK_ACTIVITY.map((item) => (
-            <Card key={item.id} style={styles.activityCard} variant="alt">
-              <Row gap={powmSpacing.base} align="center" justify="space-between">
-                {/* Icon and Name */}
-                <Row gap={powmSpacing.base} align="center" flex={1}>
-                  <View style={[styles.activityIcon, { backgroundColor: item.iconColor }]}>
-                    <PowmIcon name="face" size={24} color={powmColors.white} />
-                  </View>
-                  <Column flex={1} gap={powmSpacing.xs}>
-                    <PowmText variant="subtitleSemiBold">{item.name}</PowmText>
-                    <PowmText variant="text" color={powmColors.inactive}>
-                      {item.timestamp} {item.date}
-                    </PowmText>
-                    {item.type === 'anonymous' && item.name === 'Harry H' && (
-                      <PowmText variant="text" color={powmColors.inactive} style={styles.checkText}>
-                        Harry H checked your Name and Age on this ticket
-                        XXXXXXX XXXXX
-                      </PowmText>
-                    )}
-                  </Column>
-                </Row>
-
-                {/* Badge */}
-                <View
-                  style={[
-                    styles.badge,
-                    item.type === 'trusted'
-                      ? styles.badgeTrusted
-                      : styles.badgeAnonymous,
-                  ]}
-                >
-                  <PowmText
-                    variant="text"
-                    color={powmColors.white}
-                    style={styles.badgeText}
-                  >
-                    {item.type === 'trusted' ? 'Trusted by Powm' : 'Anonymous'}
-                  </PowmText>
-                </View>
-              </Row>
-            </Card>
+            <TicketCard
+              key={item.id}
+            icon={{
+              name: 'powmLogo',
+              backgroundColor: item.type === 'trusted'
+                    ? powmColors.activeElectricFade
+                    : powmColors.orangeElectricFade,
+              color: item.type === 'trusted'
+                    ? powmColors.activeElectricMain
+                    : powmColors.orangeElectricMain,
+              size: 48,
+            }}
+              title={item.name}
+              subtitle={`${item.timestamp} ${item.date}`}
+              tag={{
+                label: item.type === 'trusted' ? 'Trusted by Powm' : 'Anonymous',
+                backgroundColor:
+                  item.type === 'trusted'
+                    ? powmColors.activeElectricFade
+                    : '#B8860B',
+              }}
+              expandable={item.type === 'anonymous' && item.name === 'Harry H'}
+              expandedContent={
+                item.type === 'anonymous' && item.name === 'Harry H'
+                  ? 'Harry H checked your Name and Age on this ticket XXXXXXX XXXXX'
+                  : undefined
+              }
+              style={{ marginBottom: powmSpacing.xs }}
+            />
           ))}
-        </Column>
+        </View>
         </ScrollView>
 
         {/* Bottom Navigation */}
@@ -209,35 +197,7 @@ const styles = StyleSheet.create({
     marginBottom: powmSpacing.md,
   },
   activityList: {
-    marginBottom: powmSpacing.xxl,
-  },
-  activityCard: {
-    padding: 13,
-    backgroundColor: powmColors.rowBackground,
-  },
-  activityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: powmRadii.full, // Circular icons
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: powmRadii.sm,
-  },
-  badgeTrusted: {
-    backgroundColor: powmColors.activeElectricFade,
-  },
-  badgeAnonymous: {
-    backgroundColor: '#B8860B',
-  },
-  badgeText: {
-    fontSize: 10,
-  },
-  checkText: {
-    marginTop: 4,
-    fontSize: 10,
+    gap: powmSpacing.xs,
+    marginBottom: powmSpacing.xl,
   },
 });

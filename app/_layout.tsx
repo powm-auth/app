@@ -24,6 +24,13 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="history" />
         <Stack.Screen name="profile" />
+        <Stack.Screen
+          name="create-ticket"
+          options={{
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }}
+        />
       </Stack>
     </>
   );

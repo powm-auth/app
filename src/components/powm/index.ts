@@ -11,3 +11,4 @@ export * from './PowmIcon';
 export * from './FootBar';
 export * from './BackgroundImage';
 export * from './Toggle';
+export * from './TicketCard';
