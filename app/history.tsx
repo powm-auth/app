@@ -1,14 +1,21 @@
- import {
+import {
   BackgroundImage,
-  FootBar,
   PowmIcon,
   PowmText,
   Row,
   TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
@@ -89,21 +96,19 @@ const MOCK_ACTIVITY: ActivityItem[] = [
 ];
 
 export default function HistoryScreen() {
-  // Store the activity list in state so it can be cleared when deleting
   const [activities, setActivities] = useState<ActivityItem[]>(MOCK_ACTIVITY);
-  // Flag to control the display of the deletion confirmation dialog
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  // Animated value used to fill the delete button as the user holds it
   const progress = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
-  /**
-   * Triggered when the user begins pressing the delete button. Starts a 4 second
-   * animation that fills the button from left to right. If the animation
-   * completes, the confirmation dialog will be shown.
-   */
+  // Paramètre de transition
+  const params = useLocalSearchParams();
+  const transRaw = params.transition;
+  const transition = Array.isArray(transRaw) ? transRaw[0] : transRaw;
+
+  // Gestion suppression de l’historique (inchangé)
   const handlePressIn = () => {
-    // Stop any existing animation and restart from the current value
     progress.stopAnimation(() => {
       Animated.timing(progress, {
         toValue: 1,
@@ -117,12 +122,7 @@ export default function HistoryScreen() {
     });
   };
 
-  /**
-   * Triggered when the user releases the delete button before the hold completes.
-   * Resets the progress bar animation back to zero.
-   */
   const handlePressOut = () => {
-    // Stop the running animation and reset the progress back to zero
     progress.stopAnimation(() => {
       Animated.timing(progress, {
         toValue: 0,
@@ -132,28 +132,46 @@ export default function HistoryScreen() {
     });
   };
 
-  /**
-   * Called when the user confirms deletion of the history. Clears the
-   * activities array and hides the confirmation dialog.
-   */
   const handleConfirmDelete = () => {
     setActivities([]);
     setShowDeleteConfirm(false);
     progress.setValue(0);
   };
 
-  /**
-   * Called when the user cancels deletion from the confirmation dialog or
-   * taps outside of it. Hides the confirmation dialog and resets the progress.
-   */
   const handleCancelDelete = () => {
     setShowDeleteConfirm(false);
     progress.setValue(0);
   };
 
+  // Swipe vers la droite (retour à Home)
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) => {
+        const { dx, dy } = gesture;
+        return Math.abs(dx) > 20 && Math.abs(dy) < 10;
+      },
+      onPanResponderRelease: (_evt, gesture) => {
+        const { dx } = gesture;
+        if (dx > 50) {
+          router.push({
+            pathname: '/',
+            params: { transition: 'slide_from_right' },
+          } as any);
+        }
+      },
+    })
+  ).current;
+
   return (
     <BackgroundImage>
-      <View style={styles.container}>
+      {/* Animation dynamique */}
+      <Stack.Screen
+        options={{
+          animation: (transition as any) ?? ('slide_from_left' as any),
+        }}
+      />
+
+      <View style={styles.container} {...panResponder.panHandlers}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
@@ -162,13 +180,8 @@ export default function HistoryScreen() {
           <PowmText variant="title" style={styles.header}>
             Activity
           </PowmText>
-          {/* Delete History Button - always visible. Users must hold for 4 seconds to trigger deletion */}
-          <Pressable
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
-            style={styles.deleteButton}
-          >
-            {/* Progress bar fills this view as the user holds the press */}
+          {/* Delete Activity Button */}
+          <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} style={styles.deleteButton}>
             <Animated.View
               style={[
                 styles.deleteProgress,
@@ -180,14 +193,7 @@ export default function HistoryScreen() {
                 },
               ]}
             />
-            {/* Content of the button */}
-            <Row
-              gap={powmSpacing.sm}
-              align="center"
-              // Use a custom absolute fill style instead of StyleSheet.absoluteFill
-              // to satisfy the ViewStyle type expected by RowProps and avoid TS errors.
-              style={styles.deleteButtonContent}
-            >
+            <Row gap={powmSpacing.sm} align="center" style={styles.deleteButtonContent}>
               <PowmIcon name="cross" size={20} color={powmColors.white} />
               <PowmText variant="subtitleSemiBold">Delete activity</PowmText>
             </Row>
@@ -200,12 +206,14 @@ export default function HistoryScreen() {
                 key={item.id}
                 icon={{
                   name: 'powmLogo',
-                  backgroundColor: item.type === 'trusted'
-                    ? powmColors.activeElectricFade
-                    : powmColors.orangeElectricFade,
-                  color: item.type === 'trusted'
-                    ? powmColors.activeElectricMain
-                    : powmColors.orangeElectricMain,
+                  backgroundColor:
+                    item.type === 'trusted'
+                      ? powmColors.activeElectricFade
+                      : powmColors.orangeElectricFade,
+                  color:
+                    item.type === 'trusted'
+                      ? powmColors.activeElectricMain
+                      : powmColors.orangeElectricMain,
                   size: 48,
                 }}
                 title={item.name}
@@ -229,20 +237,15 @@ export default function HistoryScreen() {
           </View>
         </ScrollView>
 
-        {/* Confirmation Popup for deletion */}
+        {/* Confirmation Popup */}
         {showDeleteConfirm && (
           <>
-            {/* Overlay to darken the screen and allow tap outside to cancel */}
             <Pressable style={styles.overlay} onPress={handleCancelDelete} />
             <View style={styles.confirmPopup}>
               <PowmText variant="subtitle" style={styles.confirmTitle}>
                 Are you sure?
               </PowmText>
-              <PowmText
-                variant="text"
-                color={powmColors.inactive}
-                style={styles.confirmText}
-              >
+              <PowmText variant="text" color={powmColors.inactive} style={styles.confirmText}>
                 This will delete your activity history.
               </PowmText>
               <Row gap={powmSpacing.md} style={styles.confirmButtons}>
@@ -269,8 +272,7 @@ export default function HistoryScreen() {
           </>
         )}
 
-        {/* Bottom Navigation */}
-        <FootBar />
+        {/* Footer supprimé ici : présent dans _layout.tsx */}
       </View>
     </BackgroundImage>
   );
@@ -296,13 +298,9 @@ const styles = StyleSheet.create({
     paddingVertical: powmSpacing.base,
     paddingHorizontal: powmSpacing.lg,
     marginBottom: powmSpacing.lg,
-    height: 56, // <- new fixed height (adjust to desired value)
+    height: 56,
     overflow: 'hidden',
   },
-  /**
-   * Overlay used to indicate progress on the delete button. Its width
-   * is animated from 0% to 100% while the user holds down the button.
-   */
   deleteProgress: {
     position: 'absolute',
     left: 0,
@@ -315,18 +313,11 @@ const styles = StyleSheet.create({
     gap: powmSpacing.xs,
     marginBottom: powmSpacing.xl,
   },
-
-  /** Overlay covering the entire screen when the delete confirmation dialog
-   * is shown. A semi‑transparent background darkens the underlying content.
-   */
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.85)',
     zIndex: 998,
   },
-  /** Container for the delete confirmation dialog. Positioned in the center
-   * with padding and rounded corners matching the design system.
-   */
   confirmPopup: {
     position: 'absolute',
     top: '35%',
@@ -361,18 +352,12 @@ const styles = StyleSheet.create({
   yesButton: {
     backgroundColor: powmColors.electricMain,
   },
-
-  /**
-   * Absolute fill style for the content inside the delete button. This avoids
-   * using StyleSheet.absoluteFill on Row directly, which causes a type
-   * incompatibility with the ViewStyle expected by RowProps.
-   */
   deleteButtonContent: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center', // ensure content vertically centered
+    justifyContent: 'center',
   },
 });

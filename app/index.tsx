@@ -2,14 +2,13 @@ import {
   BackgroundImage,
   Card,
   Column,
-  FootBar,
   PowmIcon,
   PowmText,
   Row,
   TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
-import { useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
@@ -37,6 +36,11 @@ export default function HomeScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [popupAnimation] = useState(new Animated.Value(0));
 
+  // Paramètre de transition dynamique
+  const params = useLocalSearchParams();
+  const transitionRaw = params.transition;
+  const transitionParam = Array.isArray(transitionRaw) ? transitionRaw[0] : transitionRaw;
+
   const toggleNotifications = () => {
     if (!showNotifications) {
       setShowNotifications(true);
@@ -54,12 +58,12 @@ export default function HomeScreen() {
     }
   };
 
-  // Ouvre l’écran de scan (si tu as créé /scan.tsx)
+  // Ouvre l’écran de scan
   const openScanner = () => {
     router.push('/scan' as any);
   };
 
-  // Swipe gauche/droite : History ⇄ Home ⇄ Profile
+  // Swipe gauche/droite : History ⇄ Home ⇄ Profile avec animation paramétrable
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) => {
@@ -69,11 +73,17 @@ export default function HomeScreen() {
       onPanResponderRelease: (_evt, gesture) => {
         const { dx } = gesture;
         if (dx < -50) {
-          // swipe gauche -> page à droite : Profile
-          router.push('/profile' as any);
+          // swipe gauche -> vers la page à droite : Profile
+          router.push({
+            pathname: '/profile',
+            params: { transition: 'slide_from_right' },
+          } as any);
         } else if (dx > 50) {
-          // swipe droite -> page à gauche : History
-          router.push('/history' as any);
+          // swipe droite -> vers la page à gauche : History
+          router.push({
+            pathname: '/history',
+            params: { transition: 'slide_from_left' },
+          } as any);
         }
       },
     })
@@ -81,21 +91,28 @@ export default function HomeScreen() {
 
   return (
     <BackgroundImage>
+      {/* Injecte l’animation dynamique pour cette page */}
+      <Stack.Screen
+        options={{
+          animation: (transitionParam as any) ?? ('slide_from_right' as any),
+        }}
+      />
+
       <View style={styles.container} {...panResponder.panHandlers}>
-        {/* Overlay to close notification popup */}
+        {/* Overlay pour fermer la fenêtre de notifications */}
         {showNotifications && <Pressable style={styles.overlay} onPress={toggleNotifications} />}
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
         >
-          {/* Header with Welcome and Bell (placeholder for spacing) */}
+          {/* Header */}
           <Row justify="space-between" align="center" style={styles.header}>
             <PowmText variant="title">Welcome</PowmText>
             <View style={{ width: 48, height: 48 }} />
           </Row>
 
-          {/* QR Code Scanner Card */}
+          {/* Carte Scanner QR */}
           <Pressable onPress={openScanner} style={styles.qrCardPressable}>
             <ImageBackground
               source={require('@/assets/powm/illustrations/powm_draw.png')}
@@ -114,7 +131,7 @@ export default function HomeScreen() {
                     Website requests you to scan to prove your age to access.
                   </PowmText>
 
-                  {/* QR Code Icon */}
+                  {/* Icône QR Code */}
                   <View style={styles.qrIconContainer}>
                     <View style={styles.qrIcon}>
                       <PowmIcon name="qrcode" size={54} color={powmColors.gray} />
@@ -125,12 +142,21 @@ export default function HomeScreen() {
             </ImageBackground>
           </Pressable>
 
-          {/* ID Tickets Section */}
+          {/* Section ID Tickets */}
           <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
             <PowmText variant="subtitle">ID Tickets</PowmText>
 
             {/* Scan an ID Ticket */}
-            <Card onPress={openScanner} style={styles.scanTicketCard} variant="alt">
+            <Card
+              onPress={() =>
+                router.push({
+                  pathname: '/scan',
+                  params: { transition: 'slide_from_right' },
+                } as any)
+              }
+              style={styles.scanTicketCard}
+              variant="alt"
+            >
               <Row gap={powmSpacing.base} align="center">
                 <View style={[styles.ticketIcon, { backgroundColor: powmColors.scanButtonBg }]}>
                   <PowmIcon name="qrcode" size={32} color={powmColors.activeElectricMain} />
@@ -161,7 +187,12 @@ export default function HomeScreen() {
 
             {/* Create an ID Ticket */}
             <Card
-              onPress={() => router.push('/create-ticket' as any)}
+              onPress={() =>
+                router.push({
+                  pathname: '/create-ticket',
+                  params: { transition: 'slide_from_right' },
+                } as any)
+              }
               style={styles.ticketCard}
               variant="alt"
             >
@@ -182,7 +213,7 @@ export default function HomeScreen() {
           </Column>
         </ScrollView>
 
-        {/* Bell Button - Outside ScrollView for proper z-index */}
+        {/* Bouton cloche */}
         <Pressable
           style={[
             styles.bellButton,
@@ -195,7 +226,7 @@ export default function HomeScreen() {
           <PowmIcon name="bell" size={24} color={powmColors.white} />
         </Pressable>
 
-        {/* Notification Popup - Outside ScrollView for proper z-index */}
+        {/* Pop-up notifications */}
         {showNotifications && (
           <Animated.View
             style={[
@@ -212,8 +243,7 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* Bottom Navigation */}
-        <FootBar />
+        {/* Le footer a été déplacé dans _layout.tsx */}
       </View>
     </BackgroundImage>
   );
@@ -258,7 +288,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: powmRadii.md,
     padding: powmSpacing.lg,
     width: 280,
-    minHeight: 120, // 2.5 times the bell circle height (48px)
+    minHeight: 120,
     justifyContent: 'flex-end',
     alignItems: 'center',
     shadowColor: '#000',
@@ -324,10 +354,5 @@ const styles = StyleSheet.create({
     borderRadius: powmRadii.full,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  seeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
 });

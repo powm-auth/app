@@ -30,6 +30,14 @@ const TABS: FootBarTab[] = [
   { name: 'profile', label: 'Profile', icon: 'profile', route: '/profile' },
 ];
 
+// Helper pour connaître l’ordre des pages (History=0, Home=1, Profile=2)
+const getIndex = (route: string) => {
+  if (route === '/history') return 0;
+  if (route === '/') return 1;
+  if (route === '/profile') return 2;
+  return 1;
+};
+
 export const FootBar: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,7 +63,26 @@ export const FootBar: React.FC = () => {
           return (
             <Pressable
               key={tab.name}
-              onPress={() => router.push(tab.route as any)}
+              onPress={() => {
+                // Ne re-navigue pas si on est déjà sur l’onglet
+                if (pathname === tab.route) {
+                  return;
+                }
+                const currentIndex = getIndex(pathname);
+                const targetIndex = getIndex(tab.route);
+                let transition: string | undefined;
+                if (targetIndex > currentIndex) {
+                  // on va vers la droite (ex: Home -> Profile)
+                  transition = 'slide_from_right';
+                } else if (targetIndex < currentIndex) {
+                  // on va vers la gauche (ex: Home -> History)
+                  transition = 'slide_from_left';
+                }
+                router.push({
+                  pathname: tab.route as any,
+                  params: transition ? { transition } : {},
+                } as any);
+              }}
               style={styles.tab}
             >
               <View style={styles.tabContent}>

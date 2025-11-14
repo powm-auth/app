@@ -1,16 +1,16 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  PowmText,
-  PowmIcon,
-  Card,
-  Row,
-  Column,
-  FootBar,
   BackgroundImage,
+  Card,
+  Column,
+  PowmIcon,
+  PowmText,
+  Row,
 } from '@/components/powm';
-import { powmColors, powmSpacing, powmRadii } from '@/theme/powm-tokens';
+import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useRef } from 'react';
+import { PanResponder, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * Profile Screen
@@ -82,59 +82,86 @@ const MENU_SECTIONS: MenuSection[] = [
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  // Paramètre de transition
+  const params = useLocalSearchParams();
+  const transRaw = params.transition;
+  const transition = Array.isArray(transRaw) ? transRaw[0] : transRaw;
+
+  // Swipe vers la gauche pour revenir à Home
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) => {
+        const { dx, dy } = gesture;
+        return Math.abs(dx) > 20 && Math.abs(dy) < 10;
+      },
+      onPanResponderRelease: (_evt, gesture) => {
+        const { dx } = gesture;
+        if (dx < -50) {
+          router.push({
+            pathname: '/',
+            params: { transition: 'slide_from_left' },
+          } as any);
+        }
+      },
+    })
+  ).current;
 
   return (
     <BackgroundImage>
-      <View style={styles.container}>
+      {/* Animation dynamique */}
+      <Stack.Screen
+        options={{
+          animation: (transition as any) ?? ('slide_from_right' as any),
+        }}
+      />
+
+      <View style={styles.container} {...panResponder.panHandlers}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
         >
-        {/* Header */}
-        <PowmText variant="title" style={styles.header}>
-          Profile
-        </PowmText>
+          {/* Header */}
+          <PowmText variant="title" style={styles.header}>
+            Profile
+          </PowmText>
 
-        {/* Menu Sections */}
-        <Column gap={powmSpacing.lg}>
-          {MENU_SECTIONS.map((section, sectionIndex) => (
-            <Column key={sectionIndex} gap={powmSpacing.xs}>
-              <PowmText variant="subtitle" style={styles.sectionTitle}>
-                {section.title}
-              </PowmText>
+          {/* Menu Sections */}
+          <Column gap={powmSpacing.lg}>
+            {MENU_SECTIONS.map((section, sectionIndex) => (
+              <Column key={sectionIndex} gap={powmSpacing.xs}>
+                <PowmText variant="subtitle" style={styles.sectionTitle}>
+                  {section.title}
+                </PowmText>
 
-              {section.items.map((item, itemIndex) => (
-                <Card
-                  key={itemIndex}
-                  onPress={item.onPress}
-                  style={styles.menuCard}
-                  variant="alt"
-                >
-                  <Row gap={powmSpacing.base} align="center" justify="space-between">
-                    {/* Icon and Label */}
-                    <Row gap={powmSpacing.base} align="center" flex={1}>
-                      <View style={styles.menuIcon}>
-                        <PowmIcon
-                          name={item.icon as any}
-                          size={24}
-                          color={powmColors.white}
-                        />
-                      </View>
-                      <PowmText variant="subtitleSemiBold">{item.label}</PowmText>
+                {section.items.map((item, itemIndex) => (
+                  <Card
+                    key={itemIndex}
+                    onPress={item.onPress}
+                    style={styles.menuCard}
+                    variant="alt"
+                  >
+                    <Row gap={powmSpacing.base} align="center" justify="space-between">
+                      {/* Icon and Label */}
+                      <Row gap={powmSpacing.base} align="center" flex={1}>
+                        <View style={styles.menuIcon}>
+                          <PowmIcon name={item.icon as any} size={24} color={powmColors.white} />
+                        </View>
+                        <PowmText variant="subtitleSemiBold">{item.label}</PowmText>
+                      </Row>
+
+                      {/* Chevron */}
+                      <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
                     </Row>
-
-                    {/* Chevron */}
-                    <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
-                  </Row>
-                </Card>
-              ))}
-            </Column>
-          ))}
-        </Column>
+                  </Card>
+                ))}
+              </Column>
+            ))}
+          </Column>
         </ScrollView>
 
-        {/* Bottom Navigation */}
-        <FootBar />
+        {/* Pas de footer ici */}
       </View>
     </BackgroundImage>
   );
@@ -164,7 +191,7 @@ const styles = StyleSheet.create({
   menuIcon: {
     width: 48,
     height: 48,
-    borderRadius: powmRadii.full, // Circular, not rounded square
+    borderRadius: powmRadii.full,
     backgroundColor: powmColors.electricMain,
     alignItems: 'center',
     justifyContent: 'center',
