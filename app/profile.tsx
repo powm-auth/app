@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         if (dx < -50) {
           router.push({
             pathname: '/',
-            params: { transition: 'slide_from_left' },
+            params: { transition: 'slide_from_right' },
           } as any);
         }
       },
@@ -113,7 +113,7 @@ export default function ProfileScreen() {
       {/* Animation dynamique */}
       <Stack.Screen
         options={{
-          animation: (transition as any) ?? ('slide_from_right' as any),
+          animation: (transition as any) ?? ('slide_from_left' as any),
         }}
       />
 
@@ -161,7 +161,6 @@ export default function ProfileScreen() {
           </Column>
         </ScrollView>
 
-        {/* Pas de footer ici */}
       </View>
     </BackgroundImage>
   );
