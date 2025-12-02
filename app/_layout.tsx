@@ -1,4 +1,4 @@
-import { FootBar } from '@/components/powm'; // import du footer
+import { FootBar } from '@/components/powm';
 import { powmColors } from '@/theme/powm-tokens';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -24,8 +24,9 @@ export default function RootLayout() {
             contentStyle: {
               backgroundColor: powmColors.mainBackground,
             },
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
+            gestureEnabled: false, // Désactive le swipe back pour le fade
+            animation: 'fade', // Type d'animation
+            animationDuration: 10,
           }}
         >
           <Stack.Screen name="index" />
@@ -36,6 +37,7 @@ export default function RootLayout() {
             options={{
               animation: 'slide_from_bottom',
               presentation: 'modal',
+              gestureEnabled: true, // On réactive le geste pour la modale
             }}
           />
         </Stack>

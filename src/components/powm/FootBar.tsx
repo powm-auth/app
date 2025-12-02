@@ -44,9 +44,7 @@ export const FootBar: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   const isActive = (route: string) => {
-    if (route === '/') {
-      return pathname === '/';
-    }
+    if (route === '/') return pathname === '/';
     return pathname.startsWith(route);
   };
 
@@ -55,7 +53,7 @@ export const FootBar: React.FC = () => {
   const footerHeight = 94; // Base height
   const totalHeight = footerHeight + insets.bottom;
 
-  return (
+return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <Row justify="center" align="center" style={styles.tabsContainer}>
         {TABS.map((tab) => {
@@ -64,24 +62,11 @@ export const FootBar: React.FC = () => {
             <Pressable
               key={tab.name}
               onPress={() => {
-                // Ne re-navigue pas si on est déjà sur l’onglet
-                if (pathname === tab.route) {
-                  return;
-                }
-                const currentIndex = getIndex(pathname);
-                const targetIndex = getIndex(tab.route);
-                let transition: string | undefined;
-                if (targetIndex > currentIndex) {
-                  // on va vers la droite (ex: Home -> Profile)
-                  transition = 'slide_from_right';
-                } else if (targetIndex < currentIndex) {
-                  // on va vers la gauche (ex: Home -> History)
-                  transition = 'slide_from_left';
-                }
-                router.push({
-                  pathname: tab.route as any,
-                  params: transition ? { transition } : {},
-                } as any);
+                if (pathname === tab.route) return;
+                
+                // ✅ MODIFICATION : Navigation simple, sans params de transition
+                // L'animation 'fade' du _layout prendra le relais
+                router.push(tab.route as any);
               }}
               style={styles.tab}
             >

@@ -7,7 +7,7 @@ import {
   Row,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
 import { PanResponder, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -84,12 +84,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Paramètre de transition
-  const params = useLocalSearchParams();
-  const transRaw = params.transition;
-  const transition = Array.isArray(transRaw) ? transRaw[0] : transRaw;
-
-  // Swipe vers la gauche pour revenir à Home
+  // Swipe vers la gauche pour revenir à Home (Optionnel avec le fade, mais conservé ici)
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_evt, gesture) => {
@@ -99,10 +94,7 @@ export default function ProfileScreen() {
       onPanResponderRelease: (_evt, gesture) => {
         const { dx } = gesture;
         if (dx < -50) {
-          router.push({
-            pathname: '/',
-            params: { transition: 'slide_from_right' },
-          } as any);
+          router.push('/');
         }
       },
     })
@@ -110,13 +102,6 @@ export default function ProfileScreen() {
 
   return (
     <BackgroundImage>
-      {/* Animation dynamique */}
-      <Stack.Screen
-        options={{
-          animation: (transition as any) ?? ('slide_from_left' as any),
-        }}
-      />
-
       <View style={styles.container} {...panResponder.panHandlers}>
         <ScrollView
           style={styles.scrollView}
@@ -160,7 +145,6 @@ export default function ProfileScreen() {
             ))}
           </Column>
         </ScrollView>
-
       </View>
     </BackgroundImage>
   );

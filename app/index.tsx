@@ -1,3 +1,4 @@
+import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import {
   BackgroundImage,
   Card,
@@ -12,8 +13,6 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// Import the new Notification Panel
-import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 
 /**
  * Home Screen
@@ -28,14 +27,14 @@ export default function HomeScreen() {
     {
       id: '1',
       title: 'Welcome to Powm',
-      message: 'Verify your identity securely.',
+      message: 'Secure your identity with our new encrypted tickets.',
       type: 'info',
       timestamp: new Date(),
       read: false,
     },
     {
       id: '2',
-      title: 'ID Verification',
+      title: 'Verification Complete',
       message: 'Your age verification was successful.',
       type: 'success',
       timestamp: new Date(),
@@ -48,7 +47,7 @@ export default function HomeScreen() {
   const [currentTicket, setCurrentTicket] = useState<{ firstname?: string; lastname?: string; age?: string; country?: string } | null>(null);
   const [ticketId, setTicketId] = useState('');
 
-  // Generate random ticket ID (placeholder)
+  // Generate random ticket ID
   const generateTicketId = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
@@ -76,7 +75,7 @@ export default function HomeScreen() {
     <BackgroundImage>
       <View style={styles.container}>
         
-        {/* Notification Panel Component */}
+        {/* New Notification Panel */}
         <NotificationPanel 
           isOpen={isNotificationPanelOpen}
           onClose={() => setIsNotificationPanelOpen(false)}
@@ -91,7 +90,7 @@ export default function HomeScreen() {
           {/* Header */}
           <Row justify="space-between" align="center" style={styles.header}>
             <PowmText variant="title">Welcome</PowmText>
-            {/* Spacer for bell alignment */}
+            {/* Spacer to balance the absolute positioned bell */}
             <View style={{ width: 48, height: 48 }} />
           </Row>
 
@@ -126,10 +125,10 @@ export default function HomeScreen() {
           <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
             <PowmText variant="subtitle">ID Tickets</PowmText>
 
-            {/* 1. Create an ID Ticket (Moved to top, replaced Scan) */}
+            {/* 1. Create an ID Ticket (Moved to top as requested) */}
             <Card
               onPress={() => router.push('/create-ticket')}
-              style={styles.createTicketCard} // Reusing styling logic
+              style={styles.createTicketCard} 
               variant="alt"
             >
               <Row gap={powmSpacing.base} align="center">
@@ -171,7 +170,6 @@ export default function HomeScreen() {
           onPress={() => setIsNotificationPanelOpen(true)}
         >
           <PowmIcon name="bell" size={24} color={powmColors.white} />
-          {/* Optional red dot if unread */}
           {notifications.some(n => !n.read) && (
              <View style={styles.notificationDot} />
           )}
@@ -307,9 +305,11 @@ const styles = StyleSheet.create({
     padding: 13,
     backgroundColor: powmColors.rowBackground,
   },
+  // Reused styling for the Create Ticket Card to match the old Scan button's prominence if desired,
+  // or simply match standard ticket cards.
   createTicketCard: {
     padding: 13,
-    backgroundColor: powmColors.rowBackground, // Changed from scanButtonBg to match row style or keep alt
+    backgroundColor: powmColors.rowBackground, 
     marginBottom: powmSpacing.sm,
   },
   ticketIcon: {

@@ -6,7 +6,7 @@ import {
   TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   Animated,
@@ -102,12 +102,7 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  // Paramètre de transition
-  const params = useLocalSearchParams();
-  const transRaw = params.transition;
-  const transition = Array.isArray(transRaw) ? transRaw[0] : transRaw;
-
-  // Gestion suppression de l’historique (inchangé)
+  // Gestion suppression de l’historique
   const handlePressIn = () => {
     progress.stopAnimation(() => {
       Animated.timing(progress, {
@@ -153,10 +148,7 @@ export default function HistoryScreen() {
       onPanResponderRelease: (_evt, gesture) => {
         const { dx } = gesture;
         if (dx > 50) {
-          router.push({
-            pathname: '/',
-            params: { transition: 'slide_from_right' },
-          } as any);
+          router.push('/');
         }
       },
     })
@@ -164,13 +156,6 @@ export default function HistoryScreen() {
 
   return (
     <BackgroundImage>
-      {/* Animation dynamique */}
-      <Stack.Screen
-        options={{
-          animation: (transition as any) ?? ('slide_from_left' as any),
-        }}
-      />
-
       <View style={styles.container} {...panResponder.panHandlers}>
         <ScrollView
           style={styles.scrollView}
@@ -271,8 +256,6 @@ export default function HistoryScreen() {
             </View>
           </>
         )}
-
-        {/* Footer supprimé ici : présent dans _layout.tsx */}
       </View>
     </BackgroundImage>
   );

@@ -1,20 +1,21 @@
 import { PowmText } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
-import { Bell, CheckCircle, Shield, X } from 'lucide-react-native'; // npm install lucide-react-native
+import { Bell, CheckCircle, Shield, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
     Animated,
     Dimensions,
+    Easing,
     Modal,
     Pressable,
     StyleSheet,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
-const PANEL_WIDTH = width * 0.85; // Max width similar to the web "max-w-sm"
+const PANEL_WIDTH = width * 0.85;
 
 export interface Notification {
   id: string;
@@ -32,6 +33,67 @@ interface NotificationPanelProps {
   onMarkAllRead: () => void;
 }
 
+const NotificationItem = ({
+  item,
+  index,
+  getIcon,
+}: {
+  item: Notification;
+  index: number;
+  getIcon: (type: string) => React.ReactNode;
+}) => {
+  // Animations for individual items: Slide Up + Fade In
+  const translateY = useRef(new Animated.Value(20)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 400,
+        delay: index * 100, // Staggered delay
+        easing: Easing.out(Easing.back(1.5)), // Slight overshoot for "Lovable" feel
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 300,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.notificationItem,
+        !item.read && styles.unreadItem,
+        {
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
+      <View style={styles.row}>
+        <View style={styles.iconContainer}>{getIcon(item.type)}</View>
+        <View style={styles.textContainer}>
+          <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>
+            {item.title}
+          </PowmText>
+          <PowmText
+            variant="text"
+            color={powmColors.inactive}
+            style={{ fontSize: 13, marginTop: 4, lineHeight: 18 }}
+          >
+            {item.message}
+          </PowmText>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
 export function NotificationPanel({
   isOpen,
   onClose,
@@ -39,34 +101,40 @@ export function NotificationPanel({
   onMarkAllRead,
 }: NotificationPanelProps) {
   const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(PANEL_WIDTH)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(width)).current; // Start off-screen
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  // Handle Animations
   useEffect(() => {
     if (isOpen) {
+      // Entrance Animation
       Animated.parallel([
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
+        // Spring animation for the panel (Lovable style)
+        Animated.spring(slideAnim, {
+          toValue: width - PANEL_WIDTH, // Slide to position
+          damping: 25,
+          stiffness: 250,
+          mass: 0.8,
           useNativeDriver: true,
         }),
-        Animated.timing(fadeAnim, {
+        // Smooth fade for backdrop
+        Animated.timing(backdropOpacity, {
           toValue: 1,
           duration: 300,
           useNativeDriver: true,
         }),
       ]).start();
     } else {
+      // Exit Animation
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: PANEL_WIDTH,
+          toValue: width,
           duration: 250,
+          easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(fadeAnim, {
+        Animated.timing(backdropOpacity, {
           toValue: 0,
-          duration: 250,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start();
@@ -84,9 +152,7 @@ export function NotificationPanel({
     }
   };
 
-  // If we are closed and animation is finished, don't render content to save resources
-  // (Optional: can be handled by Modal 'visible' prop from parent, but handled here for animation flow)
-  if (!isOpen && slideAnim === new Animated.Value(PANEL_WIDTH)) return null;
+  if (!isOpen && backdropOpacity === new Animated.Value(0)) return null;
 
   return (
     <Modal
@@ -97,7 +163,7 @@ export function NotificationPanel({
     >
       <View style={styles.container}>
         {/* Backdrop */}
-        <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 
@@ -109,6 +175,9 @@ export function NotificationPanel({
               paddingTop: insets.top,
               paddingBottom: insets.bottom,
               transform: [{ translateX: slideAnim }],
+              // Using absolute positioning for the slide anim relative to screen width
+              right: undefined, 
+              left: 0, 
             },
           ]}
         >
@@ -117,11 +186,24 @@ export function NotificationPanel({
             <PowmText variant="subtitle">Notifications</PowmText>
             <View style={styles.headerActions}>
               {notifications.some((n) => !n.read) && (
-                <TouchableOpacity onPress={onMarkAllRead} style={styles.markReadBtn}>
-                   <PowmText variant="text" style={{ fontSize: 12 }}>Mark all read</PowmText>
+                <TouchableOpacity
+                  onPress={onMarkAllRead}
+                  style={styles.markReadBtn}
+                >
+                  <PowmText
+                    variant="text"
+                    color={powmColors.electricMain}
+                    style={{ fontSize: 12 }}
+                  >
+                    Mark all read
+                  </PowmText>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <TouchableOpacity
+                onPress={onClose}
+                style={styles.closeBtn}
+                hitSlop={10}
+              >
                 <X size={24} color={powmColors.white} />
               </TouchableOpacity>
             </View>
@@ -133,32 +215,23 @@ export function NotificationPanel({
           <View style={styles.listContainer}>
             {notifications.length === 0 ? (
               <View style={styles.emptyState}>
-                <Bell size={48} color={powmColors.inactive} style={{ opacity: 0.3, marginBottom: 12 }} />
-                <PowmText variant="text" color={powmColors.inactive}>No notifications yet</PowmText>
+                <Bell
+                  size={48}
+                  color={powmColors.inactive}
+                  style={{ opacity: 0.3, marginBottom: 12 }}
+                />
+                <PowmText variant="text" color={powmColors.inactive}>
+                  No notifications yet
+                </PowmText>
               </View>
             ) : (
-              notifications.map((notification) => (
-                <View
+              notifications.map((notification, index) => (
+                <NotificationItem
                   key={notification.id}
-                  style={[
-                    styles.notificationItem,
-                    !notification.read && styles.unreadItem,
-                  ]}
-                >
-                  <View style={styles.row}>
-                    <View style={styles.iconContainer}>
-                        {getIcon(notification.type)}
-                    </View>
-                    <View style={styles.textContainer}>
-                      <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>
-                        {notification.title}
-                      </PowmText>
-                      <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginTop: 2 }}>
-                        {notification.message}
-                      </PowmText>
-                    </View>
-                  </View>
-                </View>
+                  item={notification}
+                  index={index}
+                  getIcon={getIcon}
+                />
               ))
             )}
           </View>
@@ -175,22 +248,21 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)', // Glass/Blur effect approximation
+    backgroundColor: 'rgba(0,0,0,0.6)', // Simulates the backdrop-blur
   },
   panel: {
     position: 'absolute',
-    right: 0,
     top: 0,
     bottom: 0,
     width: PANEL_WIDTH,
-    backgroundColor: powmColors.rowBackground, // Assuming dark theme background
+    backgroundColor: 'rgba(20, 18, 28, 0.98)', // Deep dark background
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(255,255,255,0.1)',
+    borderLeftColor: 'rgba(255,255,255,0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: -10, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -201,18 +273,20 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: powmSpacing.sm,
+    gap: powmSpacing.md,
   },
   markReadBtn: {
     paddingHorizontal: 8,
     paddingVertical: 4,
+    backgroundColor: 'rgba(160, 107, 255, 0.1)',
+    borderRadius: powmRadii.sm,
   },
   closeBtn: {
     padding: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   listContainer: {
     flex: 1,
@@ -228,15 +302,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderRadius: powmRadii.md,
     marginBottom: powmSpacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.02)',
   },
   unreadItem: {
     borderLeftWidth: 3,
     borderLeftColor: powmColors.electricMain,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(160, 107, 255, 0.05)',
   },
   row: {
     flexDirection: 'row',
-    gap: powmSpacing.sm,
+    gap: powmSpacing.md,
   },
   iconContainer: {
     marginTop: 2,
