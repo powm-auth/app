@@ -1,86 +1,64 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  StyleSheet,
+  UIManager,
+  View,
+  ViewStyle,
+} from 'react-native';
+import { Column } from './Column';
 import { PowmIcon, PowmIconName } from './PowmIcon';
 import { PowmText } from './PowmText';
 import { Row } from './Row';
-import { Column } from './Column';
+
+// Enable LayoutAnimation for Android
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 /**
  * TicketCard Component
  *
  * Reusable card component for displaying tickets, activity items, etc.
- * Supports icons, tags, expandable content, and "see" button.
- *
- * @example
- * // Simple card with icon and title
- * <TicketCard
- *   icon={{ name: 'powmLogo', backgroundColor: powmColors.electricFade }}
- *   title="Name"
- *   subtitle="First and Lastname Proof"
- * />
- *
- * @example
- * // Card with tag and expandable content
- * <TicketCard
- *   icon={{ name: 'face', backgroundColor: '#B8860B' }}
- *   title="Harry H"
- *   subtitle="18h36 17/08/2024"
- *   tag={{ label: 'Anonymous', backgroundColor: '#B8860B' }}
- *   expandable
- *   expandedContent="Harry H checked your Name and Age on this ticket XXXXXXX XXXXX"
- * />
- *
- * @example
- * // Card with "see" button
- * <TicketCard
- *   icon={{ name: 'powmLogo', backgroundColor: powmColors.electricFade }}
- *   title="Name"
- *   subtitle="First and Lastname Proof"
- *   showSeeButton
- *   onSeePress={() => console.log('See pressed')}
- * />
+ * Features Lovable-style animations:
+ * - Staggered entrance (slide up + fade)
+ * - Scale on press
+ * - Smooth expansion
  */
 
 export interface TicketCardIcon {
-  /** Icon name from PowmIcon */
   name: PowmIconName;
-  /** Background color of the circular icon container */
   backgroundColor: string;
-  /** Icon color (default: white) */
   color?: string;
-  /** Icon size (default: 32) */
   size?: number;
 }
 
 export interface TicketCardTag {
-  /** Tag label text */
   label: string;
-  /** Tag background color */
   backgroundColor: string;
 }
 
 export interface TicketCardProps {
-  /** Icon configuration */
   icon: TicketCardIcon;
-  /** Card title */
   title: string;
-  /** Card subtitle (optional) */
   subtitle?: string;
-  /** Tag configuration (optional) */
   tag?: TicketCardTag;
-  /** Show "see" button with QR icon (optional) */
   showSeeButton?: boolean;
-  /** Callback when "see" button is pressed */
   onSeePress?: () => void;
-  /** Make card expandable on press (optional) */
   expandable?: boolean;
-  /** Content to show when expanded - can be string or React node (optional) */
   expandedContent?: string | React.ReactNode;
-  /** Callback when card is pressed (for non-expandable cards) */
   onPress?: () => void;
-  /** Custom style */
   style?: ViewStyle;
+  /** Index for staggered entrance animation delay */
+  index?: number;
 }
 
 export const TicketCard: React.FC<TicketCardProps> = ({
@@ -94,97 +72,169 @@ export const TicketCard: React.FC<TicketCardProps> = ({
   expandedContent,
   onPress,
   style,
+  index = 0,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Animation Values
+  const translateY = useRef(new Animated.Value(50)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  // Entrance Animation
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 600,
+        delay: index * 80,
+        easing: Easing.out(Easing.back(1.2)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   const handlePress = () => {
     if (expandable) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setIsExpanded(!isExpanded);
     } else if (onPress) {
       onPress();
     }
   };
 
+  const handlePressIn = () => {
+    Animated.spring(scale, {
+      toValue: 0.96,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scale, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  };
+
   const handleSeePress = (e: any) => {
-    e.stopPropagation(); // Prevent card press when clicking "see"
+    e.stopPropagation();
     onSeePress?.();
   };
 
   return (
-    <Pressable
-      onPress={handlePress}
-      style={({ pressed }) => [
-        styles.card,
-        pressed && styles.pressed,
-        style,
+    <Animated.View
+      style={[
+        {
+          opacity,
+          transform: [{ translateY }, { scale }],
+        },
+        style, // Apply style to the wrapper to ensure layout consistency
       ]}
     >
-      <Row gap={powmSpacing.base} align="center" justify="space-between">
-        {/* Left: Icon + Title + Subtitle */}
-        <Row gap={powmSpacing.base} align="center" flex={1}>
-          <View style={[styles.iconContainer, { backgroundColor: icon.backgroundColor }]}>
-            <PowmIcon
-              name={icon.name}
-              size={icon.size || 32}
-              color={icon.color || powmColors.white}
-            />
-          </View>
-          <Column flex={1} gap={powmSpacing.xs}>
-            <PowmText variant="subtitleSemiBold">{title}</PowmText>
-            {subtitle && (
-              <PowmText variant="text" color={powmColors.inactive}>
-                {subtitle}
+      <Pressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.card}
+      >
+        <Row gap={powmSpacing.base} align="center" justify="space-between">
+          {/* Left: Icon + Title + Subtitle */}
+          <Row gap={powmSpacing.base} align="center" flex={1}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: icon.backgroundColor },
+              ]}
+            >
+              <PowmIcon
+                name={icon.name}
+                size={icon.size || 32}
+                color={icon.color || powmColors.white}
+              />
+            </View>
+            <Column flex={1} gap={powmSpacing.xs}>
+              <PowmText variant="subtitleSemiBold">{title}</PowmText>
+              {subtitle && (
+                <PowmText variant="text" color={powmColors.inactive}>
+                  {subtitle}
+                </PowmText>
+              )}
+              {/* Expanded content */}
+              {expandable && isExpanded && expandedContent && (
+                <View style={styles.expandedContentContainer}>
+                  {typeof expandedContent === 'string' ? (
+                    <PowmText
+                      variant="text"
+                      color={powmColors.inactive}
+                      style={styles.expandedText}
+                    >
+                      {expandedContent}
+                    </PowmText>
+                  ) : (
+                    expandedContent
+                  )}
+                </View>
+              )}
+            </Column>
+          </Row>
+
+          {/* Right: Tag or See Button */}
+          {tag && (
+            <View style={[styles.tag, { backgroundColor: tag.backgroundColor }]}>
+              <PowmText
+                variant="text"
+                color={powmColors.white}
+                style={styles.tagText}
+              >
+                {tag.label}
               </PowmText>
-            )}
-            {/* Expanded content (only visible when expanded) */}
-            {expandable && isExpanded && expandedContent && (
-              typeof expandedContent === 'string' ? (
+            </View>
+          )}
+
+          {showSeeButton && (
+            <Pressable
+              onPress={handleSeePress}
+              hitSlop={10}
+              style={({ pressed }) => [pressed && { opacity: 0.7 }]}
+            >
+              <Row gap={4} align="center">
                 <PowmText
                   variant="text"
-                  color={powmColors.inactive}
-                  style={styles.expandedText}
+                  color={powmColors.activeElectricMain}
+                  style={{ fontWeight: '600' }}
                 >
-                  {expandedContent}
+                  see
                 </PowmText>
-              ) : (
-                <View style={styles.expandedText}>{expandedContent}</View>
-              )
-            )}
-          </Column>
+                <PowmIcon
+                  name="qrcode"
+                  size={14}
+                  color={powmColors.activeElectricMain}
+                />
+              </Row>
+            </Pressable>
+          )}
         </Row>
-
-        {/* Right: Tag or See Button */}
-        {tag && (
-          <View style={[styles.tag, { backgroundColor: tag.backgroundColor }]}>
-            <PowmText variant="text" color={powmColors.white} style={styles.tagText}>
-              {tag.label}
-            </PowmText>
-          </View>
-        )}
-
-        {showSeeButton && (
-          <Pressable onPress={handleSeePress}>
-            <Row gap={4} align="center">
-              <PowmText variant="text" color={powmColors.activeElectricMain}>
-                see
-              </PowmText>
-              <PowmIcon name="qrcode" size={14} color={powmColors.activeElectricMain} />
-            </Row>
-          </Pressable>
-        )}
-      </Row>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
-    padding: 13,
+    padding: 16,
     backgroundColor: powmColors.rowBackground,
     borderRadius: powmRadii.md,
-  },
-  pressed: {
-    opacity: 0.8,
   },
   iconContainer: {
     width: 48,
@@ -200,9 +250,16 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 10,
+    fontWeight: '600',
+  },
+  expandedContentContainer: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
   },
   expandedText: {
-    marginTop: 4,
-    fontSize: 10,
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

@@ -159,7 +159,7 @@ export default function HomeScreen() {
           {/* 1. SHINY QR Code Scanner Card */}
           <AnimatedItem index={0}>
             <Pressable
-              onPress={() => console.log('Navigate to Scan')}
+              onPress={() => router.push('/scan')}
               style={({ pressed }) => [
                 styles.qrCardContainer,
                 pressed && { transform: [{ scale: 0.98 }] },
@@ -207,7 +207,6 @@ export default function HomeScreen() {
                       Website requests you to scan to prove your age to access.
                     </PowmText>
 
-                    {/* Static Icon Container (No Pulse, No Border) */}
                     <View style={styles.qrIconContainer}>
                       <View style={styles.qrIcon}>
                         <PowmIcon name="qrcode" size={54} color={powmColors.white} />
@@ -242,7 +241,7 @@ export default function HomeScreen() {
                   >
                     <PowmIcon
                       name="add"
-                      size={42}
+                      size={24}
                       color={powmColors.orangeElectricMain}
                     />
                   </View>
@@ -258,7 +257,7 @@ export default function HomeScreen() {
               </Pressable>
             </AnimatedItem>
 
-            {/* 3. Name Ticket */}
+            {/* 3. Name Ticket (Updated: Clickable, No "See" button) */}
             <AnimatedItem index={3}>
               <View style={styles.glassCard}>
                  <TicketCard
@@ -270,8 +269,9 @@ export default function HomeScreen() {
                     }}
                     title="Name"
                     subtitle="First and Lastname Proof"
-                    showSeeButton
-                    onSeePress={handleSeeTicket}
+                    // REMOVED showSeeButton
+                    // ADDED onPress to open modal
+                    onPress={handleSeeTicket}
                     style={{ backgroundColor: 'transparent', padding: 0 }}
                   />
               </View>
@@ -292,7 +292,7 @@ export default function HomeScreen() {
           )}
         </Pressable>
 
-        {/* Ticket Modal */}
+        {/* Ticket Modal (REDESIGNED) */}
         {showTicketModal && currentTicket && (
           <>
             <Pressable
@@ -300,50 +300,97 @@ export default function HomeScreen() {
               onPress={() => setShowTicketModal(false)}
             />
             <View style={styles.modalContainer}>
+              {/* Redesigned Darker Shiny Card */}
               <ImageBackground
                 source={require('@/assets/powm/illustrations/powm_draw.png')}
                 style={styles.modalCard}
                 imageStyle={styles.modalCardImage}
                 resizeMode="cover"
               >
-                <View style={styles.modalCardOverlay} />
+                {/* Darker Gradient Base */}
+                <LinearGradient
+                  colors={[
+                    '#0f0718', // Almost black purple
+                    '#1a1625', // Dark grey
+                    '#120b29', // Deep indigo
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[StyleSheet.absoluteFill, { opacity: 0.95 }]} // High opacity for darkness
+                />
+
+                {/* Subtle Living Shine (Reusing animation but darker colors) */}
+                <Animated.View style={[StyleSheet.absoluteFill, { opacity: gradientShine }]}>
+                  <LinearGradient
+                    colors={[
+                      'rgba(88, 28, 135, 0.1)', // Very subtle deep purple
+                      'rgba(0, 0, 0, 0)',       // Transparent middle
+                      'rgba(124, 58, 237, 0.15)', // Subtle violet
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+
+                {/* Border Glow (Static or Animated) */}
+                <View style={styles.modalBorderOverlay} />
+
                 <View style={styles.modalCardContent}>
-                  <Column gap={powmSpacing.sm}>
-                    <PowmText variant="text" color={powmColors.inactive}>
-                      Powm ID Ticket
-                    </PowmText>
-                    <PowmText variant="title">{ticketId}</PowmText>
-                    <PowmText variant="text" color={powmColors.inactive}>
-                      Available for 24H
-                    </PowmText>
+                  <Column gap={powmSpacing.md}>
+                    <View>
+                      <PowmText variant="text" color={powmColors.inactive} style={{ letterSpacing: 1 }}>
+                        POWM ID TICKET
+                      </PowmText>
+                      <PowmText variant="title" style={{ fontSize: 26, marginTop: 4, letterSpacing: 2, color: '#fff' }}>
+                        {ticketId}
+                      </PowmText>
+                      <PowmText variant="text" color="rgba(255,255,255,0.4)" style={{ marginTop: 2 }}>
+                        Expires in 24h
+                      </PowmText>
+                    </View>
+
+                    <View style={styles.modalDivider} />
+
                     <Row
                       justify="space-between"
-                      align="flex-start"
+                      align="center"
                       style={styles.modalTicketContent}
                     >
-                      <Column gap={powmSpacing.xs}>
+                      <Column gap={4}>
+                         <PowmText variant="text" color={powmColors.inactive}>Name</PowmText>
                         {currentTicket.firstname && (
-                          <PowmText variant="title">
+                          <PowmText variant="subtitleSemiBold" style={{ fontSize: 22 }}>
                             {currentTicket.firstname}
                           </PowmText>
                         )}
                         {currentTicket.lastname && (
-                          <PowmText variant="text">
+                          <PowmText variant="subtitle" style={{ fontSize: 18, color: '#ccc' }}>
                             {currentTicket.lastname}
                           </PowmText>
                         )}
                       </Column>
-                      <View style={styles.modalQrCode}>
-                        <PowmIcon
-                          name="qrcode"
-                          size={80}
-                          color={powmColors.mainBackground}
-                        />
+                      
+                      <View style={styles.modalQrWrapper}>
+                         <View style={styles.modalQrCode}>
+                           <PowmIcon
+                             name="qrcode"
+                             size={90} // Slightly larger
+                             color={powmColors.mainBackground}
+                           />
+                         </View>
                       </View>
                     </Row>
                   </Column>
                 </View>
               </ImageBackground>
+              
+              {/* Close hint */}
+              <Pressable onPress={() => setShowTicketModal(false)} style={{alignItems: 'center', marginTop: 20}}>
+                 <View style={{width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center'}}>
+                    <PowmIcon name="cross" size={20} color="rgba(255,255,255,0.5)" />
+                 </View>
+              </Pressable>
             </View>
           </>
         )}
@@ -418,7 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: powmRadii.xl,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'rgba(236, 72, 153, 0.5)', // Pink/Magenta border
+    borderColor: 'rgba(236, 72, 153, 0.5)',
   },
   qrCardImage: {
     opacity: 0.9,
@@ -440,50 +487,70 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20, 18, 28, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    // Removed inner white border
   },
   
   ticketsSection: {
     marginBottom: powmSpacing.xxl,
   },
-  // Modal Styles
+  
+  // --- Redesigned Modal Styles ---
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Darker background for focus
     zIndex: 998,
   },
   modalContainer: {
     position: 'absolute',
-    top: '30%',
+    top: '25%', // Slightly higher
     left: powmSpacing.lg,
     right: powmSpacing.lg,
     zIndex: 999,
   },
   modalCard: {
-    borderRadius: powmRadii.lg,
+    borderRadius: 24, // More rounded
     overflow: 'hidden',
-    backgroundColor: powmColors.mainBackgroundAlt,
+    backgroundColor: '#0f0718',
+    // Deep shadow for floating effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 20,
   },
   modalCardImage: {
-    opacity: 0.9,
+    opacity: 0.4, // Darker image
     transform: [{ translateX: -800 }, { translateY: -500 }, { scale: 0.4 }],
   },
   modalCardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.63)',
-    borderRadius: powmRadii.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalBorderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)', // Subtle inner border
   },
   modalCardContent: {
-    padding: powmSpacing.lg,
+    padding: 24,
+    paddingBottom: 32,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 16,
   },
   modalTicketContent: {
-    marginTop: powmSpacing.md,
+    marginTop: 8,
+  },
+  modalQrWrapper: {
+    padding: 8,
+    backgroundColor: 'white',
+    borderRadius: 16,
   },
   modalQrCode: {
-    width: 100,
-    height: 100,
-    backgroundColor: powmColors.white,
-    borderRadius: powmRadii.sm,
+    width: 90,
+    height: 90,
     alignItems: 'center',
     justifyContent: 'center',
   },
