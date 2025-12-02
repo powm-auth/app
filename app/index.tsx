@@ -8,6 +8,7 @@ import {
   TicketCard,
 } from '@/components/powm';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -22,7 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
- * Animated wrapper for home items
+ * Animated wrapper for home items (Entrance animation)
  */
 const AnimatedItem = ({
   children,
@@ -65,6 +66,29 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  // Animation for the shiny gradient overlay
+  const gradientShine = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Gradient "Shine" Animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(gradientShine, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(gradientShine, {
+          toValue: 0,
+          duration: 3000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
   // -- Notification State --
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -75,14 +99,6 @@ export default function HomeScreen() {
       type: 'info',
       timestamp: new Date(),
       read: false,
-    },
-    {
-      id: '2',
-      title: 'Verification Complete',
-      message: 'Your age verification was successful.',
-      type: 'success',
-      timestamp: new Date(),
-      read: true,
     },
   ]);
 
@@ -107,10 +123,7 @@ export default function HomeScreen() {
   };
 
   const handleSeeTicket = () => {
-    setCurrentTicket({
-      firstname: 'John',
-      lastname: 'Doe',
-    });
+    setCurrentTicket({ firstname: 'John', lastname: 'Doe' });
     setTicketId(generateTicketId());
     setShowTicketModal(true);
   };
@@ -143,33 +156,67 @@ export default function HomeScreen() {
             <View style={{ width: 48, height: 48 }} />
           </Row>
 
-          {/* 1. QR Code Scanner Card */}
+          {/* 1. SHINY QR Code Scanner Card */}
           <AnimatedItem index={0}>
-            <ImageBackground
-              source={require('@/assets/powm/illustrations/powm_draw.png')}
-              style={styles.qrCard}
-              imageStyle={styles.qrCardImage}
-              resizeMode="cover"
+            <Pressable
+              onPress={() => console.log('Navigate to Scan')}
+              style={({ pressed }) => [
+                styles.qrCardContainer,
+                pressed && { transform: [{ scale: 0.98 }] },
+              ]}
             >
-              <View style={styles.qrCardOverlay} />
-              <View style={styles.qrCardContent}>
-                <Column gap={powmSpacing.sm}>
-                  <PowmText variant="subtitle" color={powmColors.white}>
-                    Prove your age or identity
-                  </PowmText>
-                  <PowmText variant="title">QRcode Scanner</PowmText>
-                  <PowmText variant="text" color={powmColors.inactive}>
-                    Website requests you to scan to prove your age to access.
-                  </PowmText>
+              <ImageBackground
+                source={require('@/assets/powm/illustrations/powm_draw.png')}
+                style={styles.qrCardBg}
+                imageStyle={styles.qrCardImage}
+                resizeMode="cover"
+              >
+                {/* Base Gradient (Deep Purple/Indigo) */}
+                <LinearGradient
+                  colors={[
+                    '#3b0764', // Deep rich purple
+                    '#1e1b4b', // Very dark indigo middle
+                    '#4c1d95', // Violet end
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0.8, y: 1 }}
+                  style={[StyleSheet.absoluteFill, { opacity: 0.85 }]}
+                />
 
-                  <View style={styles.qrIconContainer}>
-                    <View style={styles.qrIcon}>
-                      <PowmIcon name="qrcode" size={54} color={powmColors.gray} />
+                {/* Animated "Shine" Overlay (Vibrant Pink/Magenta) */}
+                <Animated.View style={[StyleSheet.absoluteFill, { opacity: gradientShine }]}>
+                  <LinearGradient
+                    colors={[
+                      'rgba(236, 72, 153, 0.5)', // Hot pink/Magenta highlight start
+                      'rgba(139, 92, 246, 0.1)', // Subtle violet middle
+                      'rgba(217, 70, 239, 0.5)', // Fuchsia highlight end
+                    ]}
+                    start={{ x: 0.1, y: 0.1 }}
+                    end={{ x: 0.9, y: 0.9 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                </Animated.View>
+
+                <View style={styles.qrCardContent}>
+                  <Column gap={powmSpacing.sm}>
+                    <PowmText variant="subtitle" color="#e9d5ff"> 
+                      Prove your age or identity
+                    </PowmText>
+                    <PowmText variant="title" style={{ fontSize: 28, color: '#ffffff' }}>QRcode Scanner</PowmText>
+                    <PowmText variant="text" color="#c0a0e0">
+                      Website requests you to scan to prove your age to access.
+                    </PowmText>
+
+                    {/* Static Icon Container (No Pulse, No Border) */}
+                    <View style={styles.qrIconContainer}>
+                      <View style={styles.qrIcon}>
+                        <PowmIcon name="qrcode" size={54} color={powmColors.white} />
+                      </View>
                     </View>
-                  </View>
-                </Column>
-              </View>
-            </ImageBackground>
+                  </Column>
+                </View>
+              </ImageBackground>
+            </Pressable>
           </AnimatedItem>
 
           {/* ID Tickets Section */}
@@ -195,7 +242,7 @@ export default function HomeScreen() {
                   >
                     <PowmIcon
                       name="add"
-                      size={24}
+                      size={42}
                       color={powmColors.orangeElectricMain}
                     />
                   </View>
@@ -213,20 +260,19 @@ export default function HomeScreen() {
 
             {/* 3. Name Ticket */}
             <AnimatedItem index={3}>
-              {/* We use TicketCard but styled to match the new glass look */}
               <View style={styles.glassCard}>
                  <TicketCard
                     icon={{
                       name: 'powmLogo',
                       backgroundColor: 'rgba(160, 107, 255, 0.15)',
                       color: powmColors.electricMain,
-                      size: 48, // Passed but handled by custom style below
+                      size: 48,
                     }}
                     title="Name"
                     subtitle="First and Lastname Proof"
                     showSeeButton
                     onSeePress={handleSeeTicket}
-                    style={{ backgroundColor: 'transparent', padding: 0 }} // Override default card style
+                    style={{ backgroundColor: 'transparent', padding: 0 }}
                   />
               </View>
             </AnimatedItem>
@@ -318,7 +364,7 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: powmSpacing.xl,
-    height: 48, // Match bell button height
+    height: 48,
   },
   bellButton: {
     position: 'absolute',
@@ -342,7 +388,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(42, 40, 52, 0.8)',
   },
-  // Standardized Glass Card Style
   glassCard: {
     backgroundColor: 'rgba(30, 28, 40, 0.6)',
     borderRadius: powmRadii.xl,
@@ -358,40 +403,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // QR Card Specifics
-  qrCard: {
+  
+  // --- Shiny QR Card Styles ---
+  qrCardContainer: {
     marginBottom: powmSpacing.xl,
-    borderRadius: powmRadii.xl, // Updated to XL
+    borderRadius: powmRadii.xl,
+    shadowColor: '#ec4899', 
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  qrCardBg: {
+    borderRadius: powmRadii.xl,
     overflow: 'hidden',
-    backgroundColor: powmColors.mainBackgroundAlt,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 2,
+    borderColor: 'rgba(236, 72, 153, 0.5)', // Pink/Magenta border
   },
   qrCardImage: {
     opacity: 0.9,
     transform: [{ translateX: -800 }, { translateY: -500 }, { scale: 0.4 }],
   },
-  qrCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.63)',
-    borderRadius: powmRadii.xl,
-  },
   qrCardContent: {
-    padding: powmSpacing.lg, // Increased padding
+    padding: powmSpacing.lg,
+    paddingVertical: powmSpacing.xl,
+    alignItems: 'center',
   },
   qrIconContainer: {
     alignItems: 'center',
-    marginTop: powmSpacing.base,
-    marginBottom: powmSpacing.base,
+    marginTop: powmSpacing.md,
   },
   qrIcon: {
     width: 80,
     height: 80,
     borderRadius: powmRadii.full,
-    backgroundColor: '#7d7c8556',
+    backgroundColor: 'rgba(20, 18, 28, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
+    // Removed inner white border
   },
+  
   ticketsSection: {
     marginBottom: powmSpacing.xxl,
   },
