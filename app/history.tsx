@@ -1,16 +1,18 @@
 import {
+  AnimatedEntry,
   BackgroundImage,
   Column,
+  GlassCard,
   PowmIcon,
   PowmText,
   Row,
-} from '@/components/powm';
+  ScreenHeader,
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Easing,
   LayoutAnimation,
   PanResponder,
   Platform,
@@ -47,36 +49,14 @@ const MOCK_ACTIVITY: ActivityItem[] = [
 
 const HistoryListItem = ({ 
   item, 
-  index, 
   isEditing, 
   onDelete 
 }: { 
   item: ActivityItem; 
-  index: number; 
   isEditing: boolean;
   onDelete: (id: string) => void;
 }) => {
-  const translateY = useRef(new Animated.Value(50)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
   const deleteScale = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 80,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   useEffect(() => {
     Animated.spring(deleteScale, {
@@ -88,13 +68,13 @@ const HistoryListItem = ({
   }, [isEditing]);
 
   return (
-    <Animated.View style={[styles.itemContainer, { opacity, transform: [{ translateY }] }]}>
+    <View style={styles.itemContainer}>
       <View style={styles.itemInner}>
         {/* Left: Icon (Larger) */}
         <View style={[styles.iconCircle, { backgroundColor: 'rgba(255,255,255,0.07)' }]}>
           <PowmIcon 
             name={item.type === 'anonymous' ? 'face' : 'powmLogo'} 
-            size={24} // Increased from 22
+            size={24} 
             color={item.iconColor} 
           />
         </View>
@@ -136,7 +116,7 @@ const HistoryListItem = ({
           )}
         </View>
       </View>
-    </Animated.View>
+    </View>
   );
 };
 
@@ -189,29 +169,34 @@ export default function HistoryScreen() {
           contentContainerStyle={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}
           showsVerticalScrollIndicator={false}
         >
-          <Row justify="space-between" align="center" style={styles.header}>
-            <PowmText variant="title">History</PowmText>
-            {activities.length > 0 && (
-              <Pressable onPress={toggleEditMode} style={styles.headerAction} hitSlop={10}>
-                <PowmText 
-                  variant="text" 
-                  color={isEditing ? powmColors.electricMain : powmColors.gray}
-                  style={{ fontWeight: '600', fontSize: 13 }}
-                >
-                  {isEditing ? 'Done' : 'Edit'}
-                </PowmText>
-              </Pressable>
-            )}
-          </Row>
+          <ScreenHeader 
+            title="History" 
+            showBackButton={false}
+            rightElement={
+              activities.length > 0 ? (
+                <Pressable onPress={toggleEditMode} style={styles.headerAction} hitSlop={10}>
+                  <PowmText 
+                    variant="text" 
+                    color={isEditing ? powmColors.electricMain : powmColors.gray}
+                    style={{ fontWeight: '600', fontSize: 13 }}
+                  >
+                    {isEditing ? 'Done' : 'Edit'}
+                  </PowmText>
+                </Pressable>
+              ) : undefined
+            }
+          />
 
           {activities.length === 0 && (
-            <Animated.View style={styles.emptyState}>
-              <PowmIcon name="clock" size={56} color={powmColors.inactive} style={{ opacity: 0.5, marginBottom: 16 }} />
-              <PowmText variant="subtitle" color={powmColors.gray}>No activity yet</PowmText>
-              <PowmText variant="text" color={powmColors.inactive} align="center" style={{ marginTop: 8 }}>
-                Your verification history will appear here.
-              </PowmText>
-            </Animated.View>
+            <AnimatedEntry>
+              <View style={styles.emptyState}>
+                <PowmIcon name="clock" size={56} color={powmColors.inactive} style={{ opacity: 0.5, marginBottom: 16 }} />
+                <PowmText variant="subtitle" color={powmColors.gray}>No activity yet</PowmText>
+                <PowmText variant="text" color={powmColors.inactive} align="center" style={{ marginTop: 8 }}>
+                  Your verification history will appear here.
+                </PowmText>
+              </View>
+            </AnimatedEntry>
           )}
 
           {isEditing && activities.length > 0 && (
@@ -222,29 +207,34 @@ export default function HistoryScreen() {
             </Pressable>
           )}
 
-          <View style={styles.listContainer}>
+          <Column gap={powmSpacing.xl}>
             {Object.entries(groupedActivities).map(([dateLabel, items], groupIndex) => (
               <View key={dateLabel} style={styles.groupContainer}>
                 <PowmText variant="subtitleSemiBold" color={powmColors.gray} style={styles.groupTitle}>
                   {dateLabel}
                 </PowmText>
                 
-                <View style={styles.groupCard}>
+                <GlassCard padding={0}>
                   {items.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                      {index > 0 && <View style={styles.separator} />}
-                      <HistoryListItem 
-                        item={item} 
-                        index={(groupIndex * 5) + index}
-                        isEditing={isEditing}
-                        onDelete={handleDeleteItem}
-                      />
-                    </React.Fragment>
+                    <AnimatedEntry 
+                      key={item.id} 
+                      index={(groupIndex * 5) + index}
+                      slideDistance={30}
+                    >
+                      <View>
+                        {index > 0 && <View style={styles.separator} />}
+                        <HistoryListItem 
+                          item={item} 
+                          isEditing={isEditing}
+                          onDelete={handleDeleteItem}
+                        />
+                      </View>
+                    </AnimatedEntry>
                   ))}
-                </View>
+                </GlassCard>
               </View>
             ))}
-          </View>
+          </Column>
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -263,18 +253,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: powmSpacing.lg,
   },
-  header: {
-    marginBottom: powmSpacing.lg,
-    height: 44,
-  },
   headerAction: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 20,
-  },
-  listContainer: {
-    gap: powmSpacing.xl,
   },
   groupContainer: {
     gap: powmSpacing.sm,
@@ -287,28 +270,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 4,
   },
-  groupCard: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
   itemContainer: {},
   itemInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16, // Increased vertical padding
+    paddingVertical: 16, 
     paddingHorizontal: 16,
-    gap: 16, // Increased gap
+    gap: 16, 
   },
   separator: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    marginLeft: 76, // 16 (padding) + 44 (icon) + 16 (gap) = 76
+    marginLeft: 76, 
   },
   iconCircle: {
-    width: 44, // Increased from 36
+    width: 44, 
     height: 44,
     borderRadius: 22,
     alignItems: 'center',
@@ -325,7 +301,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   deleteActionCircle: {
-    width: 32, // Larger touch target
+    width: 32, 
     height: 32,
     borderRadius: 16,
     backgroundColor: powmColors.deletionRedHard,
@@ -338,7 +314,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   emptyState: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 100,

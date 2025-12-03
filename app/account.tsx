@@ -1,23 +1,25 @@
 import {
-    BackgroundImage,
-    Column,
-    PowmIcon,
-    PowmText,
-    Row
-} from '@/components/powm';
+  AnimatedEntry,
+  BackgroundImage,
+  Column,
+  Divider,
+  GlassCard,
+  PowmIcon,
+  PowmText,
+  Row,
+  ScreenHeader,
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Clipboard,
-    Easing,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    View,
+  Alert,
+  Clipboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -35,35 +37,14 @@ const DetailCard = ({
   description?: string;
   index: number 
 }) => {
-  const translateY = useRef(new Animated.Value(20)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 100,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
   const handleCopy = () => {
     Clipboard.setString(value);
     Alert.alert("Copied", `${label} copied to clipboard.`);
   };
 
   return (
-    <Animated.View style={[styles.detailCard, { opacity, transform: [{ translateY }] }]}>
-      <Pressable onPress={handleCopy}>
+    <AnimatedEntry index={index} slideDistance={20}>
+      <GlassCard onPress={handleCopy} style={styles.detailCard}>
         <Column gap={4}>
           <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
             {label}
@@ -80,14 +61,13 @@ const DetailCard = ({
         <View style={styles.copyIcon}>
           <PowmIcon name="data" size={16} color={powmColors.electricMain} />
         </View>
-      </Pressable>
-    </Animated.View>
+      </GlassCard>
+    </AnimatedEntry>
   );
 };
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   
   // Default state as requested
   const [accountState, setAccountState] = useState<AccountState>('Secured');
@@ -111,15 +91,7 @@ export default function AccountScreen() {
             { paddingTop: insets.top + powmSpacing.lg, paddingBottom: insets.bottom + powmSpacing.xl },
           ]}
         >
-          {/* Header */}
-          <Row align="center" style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backButton}>
-              <PowmIcon name="chevron" size={24} color={powmColors.white} style={{ transform: [{ rotate: '180deg' }] }} />
-            </Pressable>
-            <PowmText variant="title" style={{ flex: 1, textAlign: 'center', marginRight: 40 }}>
-              Account
-            </PowmText>
-          </Row>
+          <ScreenHeader title="Account" />
 
           {/* Profile Section */}
           <View style={styles.profileSection}>
@@ -137,10 +109,10 @@ export default function AccountScreen() {
             <PowmText variant="text" color={powmColors.inactive}>Visible as "Anonymous" to services</PowmText>
           </View>
 
-          <View style={styles.divider} />
+          <Divider style={{ marginBottom: powmSpacing.xl }} />
 
           {/* Account Status */}
-          <View style={[styles.statusCard, { borderColor: getStatusColor(accountState) + '40' }]}>
+          <GlassCard style={{ borderColor: getStatusColor(accountState) + '40' }}>
             <Row align="center" gap={16}>
               <View style={[styles.statusIcon, { backgroundColor: getStatusColor(accountState) + '20' }]}>
                 <PowmIcon 
@@ -156,7 +128,7 @@ export default function AccountScreen() {
                 </PowmText>
               </Column>
             </Row>
-          </View>
+          </GlassCard>
 
           <View style={styles.sectionSpacer} />
 
@@ -189,13 +161,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: powmSpacing.lg },
-  header: { marginBottom: powmSpacing.md },
-  backButton: {
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-  },
   
   // Profile
   profileSection: { alignItems: 'center', marginVertical: powmSpacing.xl },
@@ -213,17 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   
-  divider: {
-    height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: powmSpacing.xl,
-  },
-
   // Status
-  statusCard: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.xl,
-    padding: 16,
-    borderWidth: 1,
-  },
   statusIcon: {
     width: 48, height: 48, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center',
@@ -234,17 +189,11 @@ const styles = StyleSheet.create({
 
   // Details
   detailCard: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: powmRadii.lg,
     padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    position: 'relative',
   },
   copyIcon: {
     position: 'absolute',
-    right: 0, top: 0,
-    padding: 16,
+    right: 16, top: 16,
     opacity: 0.5,
   },
 });

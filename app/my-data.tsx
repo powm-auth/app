@@ -1,25 +1,27 @@
 import {
-    BackgroundImage,
-    Column,
-    PowmIcon,
-    PowmIconName,
-    PowmText,
-    Row,
-} from '@/components/powm';
+  AnimatedEntry,
+  BackgroundImage,
+  Column,
+  GlassCard,
+  ListItem,
+  PowmIcon,
+  PowmIconName,
+  PowmText,
+  Row,
+  ScreenHeader,
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Easing,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    UIManager,
-    View
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  UIManager,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,39 +29,19 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Animated Stat Card Component
 const StatCard = ({ label, value, icon, index }: { label: string; value: string; icon: PowmIconName; index: number }) => {
-  const translateY = useRef(new Animated.Value(20)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 100,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
   return (
-    <Animated.View style={[styles.statCard, { opacity, transform: [{ translateY }] }]}>
-      <View style={styles.statIcon}>
-        <PowmIcon name={icon} size={20} color={powmColors.electricMain} />
-      </View>
-      <Column>
-        <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }}>{value}</PowmText>
-        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>{label}</PowmText>
-      </Column>
-    </Animated.View>
+    <AnimatedEntry index={index} slideDistance={20} style={{ flex: 1 }}>
+      <GlassCard style={styles.statCard}>
+        <View style={styles.statIcon}>
+          <PowmIcon name={icon} size={20} color={powmColors.electricMain} />
+        </View>
+        <Column>
+          <PowmText variant="subtitleSemiBold" style={{ fontSize: 20 }}>{value}</PowmText>
+          <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>{label}</PowmText>
+        </Column>
+      </GlassCard>
+    </AnimatedEntry>
   );
 };
 
@@ -70,7 +52,6 @@ export default function MyDataScreen() {
 
   const handleBackup = () => {
     setIsBackupLoading(true);
-    // Simulate upload
     setTimeout(() => {
       setIsBackupLoading(false);
       Alert.alert("Success", "Your encrypted data has been safely uploaded to Powm servers.");
@@ -105,15 +86,7 @@ export default function MyDataScreen() {
             { paddingTop: insets.top + powmSpacing.lg, paddingBottom: insets.bottom + powmSpacing.xl },
           ]}
         >
-          {/* Header */}
-          <Row align="center" style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backButton}>
-              <PowmIcon name="chevron" size={24} color={powmColors.white} style={{ transform: [{ rotate: '180deg' }] }} />
-            </Pressable>
-            <PowmText variant="title" style={{ flex: 1, textAlign: 'center', marginRight: 40 }}>
-              My Data
-            </PowmText>
-          </Row>
+          <ScreenHeader title="My Data" />
 
           {/* Dashboard Stats */}
           <Row gap={12} style={styles.statsContainer}>
@@ -128,45 +101,25 @@ export default function MyDataScreen() {
           <Column gap={powmSpacing.md}>
             <PowmText variant="subtitle" style={styles.sectionTitle}>Recovery & Backup</PowmText>
             
-            <View style={styles.cardGroup}>
-              {/* Crypto Codes */}
-              <Pressable style={styles.actionRow} onPress={() => Alert.alert("Crypto Codes", "A-1234-B-5678-C-9012")}>
-                <Row align="center" gap={16}>
-                  <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 154, 46, 0.15)' }]}>
-                    <PowmIcon name="data" size={22} color={powmColors.orangeElectricMain} />
-                  </View>
-                  <Column flex={1}>
-                    <PowmText variant="subtitleSemiBold">Crypto Codes</PowmText>
-                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
-                      View your recovery phrase
-                    </PowmText>
-                  </Column>
-                  <PowmIcon name="chevron" size={16} color={powmColors.inactive} />
-                </Row>
-              </Pressable>
-
+            <GlassCard padding={0}>
+              <ListItem 
+                title="Crypto Codes"
+                subtitle="View your recovery phrase"
+                icon="data"
+                iconColor={powmColors.orangeElectricMain}
+                onPress={() => Alert.alert("Crypto Codes", "A-1234-B-5678-C-9012")}
+                showChevron
+              />
               <View style={styles.separator} />
-
-              {/* Cloud Backup */}
-              <Pressable style={styles.actionRow} onPress={handleBackup}>
-                <Row align="center" gap={16}>
-                  <View style={[styles.iconCircle, { backgroundColor: 'rgba(96, 107, 226, 0.15)' }]}>
-                    {isBackupLoading ? (
-                      <PowmIcon name="clock" size={22} color={powmColors.electricMain} />
-                    ) : (
-                      <PowmIcon name="data" size={22} color={powmColors.electricMain} />
-                    )}
-                  </View>
-                  <Column flex={1}>
-                    <PowmText variant="subtitleSemiBold">Encrypted Backup</PowmText>
-                    <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
-                      {isBackupLoading ? "Uploading..." : "Upload save to Powm servers"}
-                    </PowmText>
-                  </Column>
-                  <PowmIcon name="chevron" size={16} color={powmColors.inactive} />
-                </Row>
-              </Pressable>
-            </View>
+              <ListItem 
+                title="Encrypted Backup"
+                subtitle={isBackupLoading ? "Uploading..." : "Upload save to Powm servers"}
+                icon={isBackupLoading ? "clock" : "data"}
+                iconColor={powmColors.electricMain}
+                onPress={handleBackup}
+                showChevron
+              />
+            </GlassCard>
           </Column>
 
           <View style={styles.sectionSpacer} />
@@ -204,23 +157,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: powmSpacing.lg },
-  header: { marginBottom: powmSpacing.xl },
-  backButton: {
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-  },
   
   // Stats
   statsContainer: { marginBottom: powmSpacing.lg },
   statCard: {
-    flex: 1,
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.lg,
     padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   statIcon: { marginBottom: 8, opacity: 0.8 },
   
@@ -228,18 +169,6 @@ const styles = StyleSheet.create({
   sectionSpacer: { height: 32 },
   sectionTitle: { marginLeft: 4, marginBottom: 8, fontSize: 14, textTransform: 'uppercase', letterSpacing: 1, opacity: 0.8 },
   
-  // Card Group (Recovery)
-  cardGroup: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    overflow: 'hidden',
-  },
-  actionRow: {
-    padding: 16,
-    // active opacity handled by pressable default on some systems, can add style if needed
-  },
   separator: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',

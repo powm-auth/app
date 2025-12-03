@@ -1,24 +1,19 @@
 import {
+  AnimatedEntry,
   Card,
   Column,
+  GlassCard,
+  ListItem,
   PowmIcon,
   PowmText,
   Row,
   Toggle,
-} from '@/components/powm';
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Animated, Easing, ImageBackground, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-/**
- * Create Ticket Screen
- *
- * Allows users to create an ID ticket by selecting which information
- * to include (firstname, lastname, age, country).
- * Shows a preview of the ticket at the bottom.
- */
 
 interface TicketInfo {
   firstname: boolean;
@@ -50,7 +45,6 @@ export default function CreateTicketScreen() {
 
   const handleConfirm = () => {
     setShowConfirmation(false);
-    // TODO: Navigate to success screen or back to home
     router.back();
   };
 
@@ -78,7 +72,6 @@ export default function CreateTicketScreen() {
     outputRange: [200, 0],
   });
 
-  // Generate random ticket ID (placeholder)
   const generateTicketId = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
@@ -93,53 +86,51 @@ export default function CreateTicketScreen() {
 
   return (
     <View style={styles.container}>
-        {/* Overlay for ticket modal */}
         {showTicket && (
           <Pressable style={styles.overlay} onPress={toggleTicketView} />
         )}
 
-        {/* Confirmation Popup */}
         {showConfirmation && (
           <>
             <Pressable style={styles.overlay} onPress={() => setShowConfirmation(false)} />
-            <View style={styles.confirmationPopup}>
-              <PowmText variant="subtitle" style={styles.confirmTitle}>
-                Are you sure?
-              </PowmText>
-              <PowmText variant="text" color={powmColors.inactive} style={styles.confirmText}>
-                This will create a new ID ticket with your selected information.
-              </PowmText>
-              <Row gap={powmSpacing.md} style={styles.confirmButtons}>
-                <Pressable
-                  style={[styles.confirmButton, styles.noButton]}
-                  onPress={() => setShowConfirmation(false)}
-                >
-                  <Row gap={powmSpacing.sm} align="center">
-                    <PowmIcon name="cross" size={20} color={powmColors.white} />
-                    <PowmText variant="subtitleSemiBold">No</PowmText>
-                  </Row>
-                </Pressable>
-                <Pressable
-                  style={[styles.confirmButton, styles.yesButton]}
-                  onPress={handleConfirm}
-                >
-                  <Row gap={powmSpacing.sm} align="center">
-                    <PowmIcon name="check" size={20} color={powmColors.white} />
-                    <PowmText variant="subtitleSemiBold">Yes</PowmText>
-                  </Row>
-                </Pressable>
-              </Row>
+            <View style={styles.confirmationPopupContainer}>
+               <GlassCard variant="dark" style={styles.confirmationPopup}>
+                <PowmText variant="subtitle" style={styles.confirmTitle}>
+                  Are you sure?
+                </PowmText>
+                <PowmText variant="text" color={powmColors.inactive} style={styles.confirmText}>
+                  This will create a new ID ticket with your selected information.
+                </PowmText>
+                <Row gap={powmSpacing.md} style={styles.confirmButtons}>
+                  <Pressable
+                    style={[styles.confirmButton, styles.noButton]}
+                    onPress={() => setShowConfirmation(false)}
+                  >
+                    <Row gap={powmSpacing.sm} align="center">
+                      <PowmIcon name="cross" size={20} color={powmColors.white} />
+                      <PowmText variant="subtitleSemiBold">No</PowmText>
+                    </Row>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.confirmButton, styles.yesButton]}
+                    onPress={handleConfirm}
+                  >
+                    <Row gap={powmSpacing.sm} align="center">
+                      <PowmIcon name="check" size={20} color={powmColors.white} />
+                      <PowmText variant="subtitleSemiBold">Yes</PowmText>
+                    </Row>
+                  </Pressable>
+                </Row>
+              </GlassCard>
             </View>
           </>
         )}
 
         <View style={[styles.content, { paddingTop: insets.top + powmSpacing.lg }]}>
-          {/* Close Button */}
           <Pressable style={styles.closeButton} onPress={() => router.replace('/')}>
             <PowmIcon name="cross" size={24} color={powmColors.white} />
           </Pressable>
 
-          {/* Header */}
           <Column gap={powmSpacing.sm} style={styles.header}>
             <PowmText variant="title">Creating an ID Ticket</PowmText>
             <PowmText variant="text" color={powmColors.inactive} style={styles.headerDescription}>
@@ -148,36 +139,38 @@ export default function CreateTicketScreen() {
             </PowmText>
           </Column>
 
-          {/* Information Selection */}
           <Column gap={powmSpacing.base} style={styles.section}>
             <PowmText variant="subtitle" style={styles.sectionTitle}>
               Which information to link with this Ticket
             </PowmText>
 
-            <Column gap={powmSpacing.sm}>
-              <Row justify="space-between" align="center" style={styles.toggleRow}>
-                <PowmText variant="subtitle">Firstname</PowmText>
-                <Toggle value={ticketInfo.firstname} onValueChange={() => toggleInfo('firstname')} />
-              </Row>
-
-              <Row justify="space-between" align="center" style={styles.toggleRow}>
-                <PowmText variant="subtitle">Lastname</PowmText>
-                <Toggle value={ticketInfo.lastname} onValueChange={() => toggleInfo('lastname')} />
-              </Row>
-
-              <Row justify="space-between" align="center" style={styles.toggleRow}>
-                <PowmText variant="subtitle">Age</PowmText>
-                <Toggle value={ticketInfo.age} onValueChange={() => toggleInfo('age')} />
-              </Row>
-
-              <Row justify="space-between" align="center" style={styles.toggleRow}>
-                <PowmText variant="subtitle">Country</PowmText>
-                <Toggle value={ticketInfo.country} onValueChange={() => toggleInfo('country')} />
-              </Row>
-            </Column>
+            <GlassCard padding={0}>
+               <ListItem 
+                  title="Firstname" 
+                  rightElement={<Toggle value={ticketInfo.firstname} onValueChange={() => toggleInfo('firstname')} />}
+                  showChevron={false}
+               />
+               <View style={styles.separator} />
+               <ListItem 
+                  title="Lastname" 
+                  rightElement={<Toggle value={ticketInfo.lastname} onValueChange={() => toggleInfo('lastname')} />}
+                  showChevron={false}
+               />
+               <View style={styles.separator} />
+               <ListItem 
+                  title="Age" 
+                  rightElement={<Toggle value={ticketInfo.age} onValueChange={() => toggleInfo('age')} />}
+                  showChevron={false}
+               />
+               <View style={styles.separator} />
+               <ListItem 
+                  title="Country" 
+                  rightElement={<Toggle value={ticketInfo.country} onValueChange={() => toggleInfo('country')} />}
+                  showChevron={false}
+               />
+            </GlassCard>
           </Column>
 
-          {/* Create Button */}
           <Card onPress={handleCreateTicket} style={styles.createButton} variant="alt">
             <Row gap={powmSpacing.base} align="center">
               <View style={[styles.createButtonIcon, { backgroundColor: powmColors.electricFade }]}>
@@ -190,7 +183,6 @@ export default function CreateTicketScreen() {
           </Card>
         </View>
 
-        {/* Ticket Preview Card (bottom) */}
         <Animated.View
           style={[
             styles.ticketPreview,
@@ -225,7 +217,6 @@ export default function CreateTicketScreen() {
                       {ticketInfo.country && <PowmText variant="text">France</PowmText>}
                     </Column>
 
-                    {/* QR Code */}
                     <View style={styles.qrCode}>
                       <PowmIcon name="qrcode" size={80} color={powmColors.mainBackground} />
                     </View>
@@ -272,8 +263,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: powmSpacing.sm,
   },
-  toggleRow: {
-    paddingVertical: powmSpacing.xs,
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   createButton: {
     padding: 13,
@@ -326,15 +318,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmationPopup: {
+  confirmationPopupContainer: {
     position: 'absolute',
     top: '35%',
     left: powmSpacing.xl,
     right: powmSpacing.xl,
-    backgroundColor: '#1A1824',
-    borderRadius: powmRadii.lg,
-    padding: powmSpacing.xl,
     zIndex: 999,
+  },
+  confirmationPopup: {
+    padding: powmSpacing.xl,
   },
   confirmTitle: {
     marginBottom: powmSpacing.md,

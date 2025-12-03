@@ -3,9 +3,9 @@ import { usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PowmIcon, PowmIconName } from './PowmIcon';
-import { PowmText } from './PowmText';
-import { Row } from './Row';
+import { PowmIcon, PowmIconName } from './ui/PowmIcon';
+import { PowmText } from './ui/PowmText';
+import { Row } from './ui/Row';
 
 interface FootBarTab {
   name: string;

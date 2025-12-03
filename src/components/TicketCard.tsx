@@ -11,10 +11,10 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { Column } from './Column';
-import { PowmIcon, PowmIconName } from './PowmIcon';
-import { PowmText } from './PowmText';
-import { Row } from './Row';
+import { Column } from './ui/Column';
+import { PowmIcon, PowmIconName } from './ui/PowmIcon';
+import { PowmText } from './ui/PowmText';
+import { Row } from './ui/Row';
 
 // Enable LayoutAnimation for Android
 if (

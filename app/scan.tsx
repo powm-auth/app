@@ -1,4 +1,4 @@
-import { PowmIcon, PowmText } from '@/components/powm';
+import { PowmIcon, PowmText } from '@/components';
 import { powmColors, powmRadii } from '@/theme/powm-tokens';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';

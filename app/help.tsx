@@ -1,23 +1,25 @@
 import {
-    BackgroundImage,
-    Column,
-    PowmIcon,
-    PowmText,
-    Row,
-} from '@/components/powm';
+  AnimatedEntry,
+  BackgroundImage,
+  Column,
+  GlassCard,
+  PowmIcon,
+  PowmText,
+  Row,
+  ScreenHeader,
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Easing,
-    LayoutAnimation,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    UIManager,
-    View,
+  Animated,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  UIManager,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -33,32 +35,7 @@ interface FAQItemProps {
 
 const FAQItem = ({ question, answer, index }: FAQItemProps) => {
   const [expanded, setExpanded] = useState(false);
-  
-  // Entrance Animations
-  const translateY = useRef(new Animated.Value(20)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  
-  // Chevron Rotation Animation
   const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Entrance
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 80,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -77,27 +54,29 @@ const FAQItem = ({ question, answer, index }: FAQItemProps) => {
   });
 
   return (
-    <Animated.View style={[styles.faqCard, { opacity, transform: [{ translateY }] }]}>
-      <Pressable onPress={toggleExpand} style={styles.questionRow}>
-        <Row align="center" gap={12} style={{ flex: 1 }}>
-          <View style={styles.dot} />
-          <PowmText variant="subtitleSemiBold" style={{ flex: 1, fontSize: 15 }}>
-            {question}
-          </PowmText>
-        </Row>
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
-        </Animated.View>
-      </Pressable>
-      
-      {expanded && (
-        <View style={styles.answerContainer}>
-          <PowmText variant="text" color={powmColors.inactive} style={styles.answerText}>
-            {answer}
-          </PowmText>
-        </View>
-      )}
-    </Animated.View>
+    <AnimatedEntry index={index} slideDistance={20}>
+      <GlassCard padding={0} style={{ marginBottom: powmSpacing.sm }}>
+        <Pressable onPress={toggleExpand} style={styles.questionRow}>
+          <Row align="center" gap={12} style={{ flex: 1 }}>
+            <View style={styles.dot} />
+            <PowmText variant="subtitleSemiBold" style={{ flex: 1, fontSize: 15 }}>
+              {question}
+            </PowmText>
+          </Row>
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <PowmIcon name="chevron" size={20} color={powmColors.inactive} />
+          </Animated.View>
+        </Pressable>
+        
+        {expanded && (
+          <View style={styles.answerContainer}>
+            <PowmText variant="text" color={powmColors.inactive} style={styles.answerText}>
+              {answer}
+            </PowmText>
+          </View>
+        )}
+      </GlassCard>
+    </AnimatedEntry>
   );
 };
 
@@ -142,17 +121,9 @@ export default function HelpScreen() {
             { paddingTop: insets.top + powmSpacing.lg, paddingBottom: insets.bottom + powmSpacing.xl },
           ]}
         >
-          {/* Header */}
-          <Row align="center" style={styles.header}>
-            <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backButton}>
-              <PowmIcon name="chevron" size={24} color={powmColors.white} style={{ transform: [{ rotate: '180deg' }] }} />
-            </Pressable>
-            <PowmText variant="title" style={{ flex: 1, textAlign: 'center', marginRight: 40 }}>
-              Help & FAQ
-            </PowmText>
-          </Row>
+          <ScreenHeader title="Help & FAQ" />
 
-          <Column gap={powmSpacing.md}>
+          <Column gap={0}>
             {faqs.map((item, index) => (
               <FAQItem 
                 key={index} 
@@ -179,22 +150,6 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   content: { paddingHorizontal: powmSpacing.lg },
-  header: { marginBottom: powmSpacing.xl },
-  backButton: {
-    width: 40, height: 40,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-  },
-  
-  // FAQ Card
-  faqCard: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
   questionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,7 +169,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontSize: 13,
   },
-  
   footerNote: {
     marginTop: powmSpacing.xxl,
     opacity: 0.6,

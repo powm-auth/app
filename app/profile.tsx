@@ -1,19 +1,17 @@
 import {
+  AnimatedEntry,
   BackgroundImage,
   Column,
-  PowmIcon,
+  GlassCard,
+  ListItem,
   PowmIconName,
   PowmText,
-  Row,
-} from '@/components/powm';
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
-  Animated,
-  Easing,
   PanResponder,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -30,60 +28,6 @@ interface MenuItem {
   label: string;
   onPress: () => void;
 }
-
-const ProfileListItem = ({
-  item,
-  index,
-  isLast,
-}: {
-  item: MenuItem;
-  index: number;
-  isLast: boolean;
-}) => {
-  const translateY = useRef(new Animated.Value(50)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 60,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      <Pressable
-        onPress={item.onPress}
-        style={({ pressed }) => [
-          styles.itemContainer,
-          pressed && { backgroundColor: 'rgba(255,255,255,0.03)' },
-        ]}
-      >
-        <Row gap={16} align="center" style={styles.itemInner}>
-          <View style={styles.iconCircle}>
-            <PowmIcon name={item.icon} size={24} color={powmColors.electricMain} />
-          </View>
-          <PowmText variant="subtitleSemiBold" style={{ fontSize: 16, flex: 1 }}>
-            {item.label}
-          </PowmText>
-          <PowmIcon name="chevron" size={18} color={powmColors.inactive} />
-        </Row>
-      </Pressable>
-      {!isLast && <View style={styles.separator} />}
-    </Animated.View>
-  );
-};
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -131,7 +75,7 @@ export default function ProfileScreen() {
         {
           icon: 'face',
           label: 'Help',
-          onPress: () => router.push('/help'), // ✅ LINKED
+          onPress: () => router.push('/help'),
         },
       ],
     },
@@ -184,16 +128,27 @@ export default function ProfileScreen() {
                     {section.title}
                   </PowmText>
 
-                  <View style={styles.groupCard}>
+                  <GlassCard padding={0}>
                     {section.items.map((item, itemIndex) => (
-                      <ProfileListItem
-                        key={itemIndex}
-                        item={item}
+                      <AnimatedEntry 
+                        key={itemIndex} 
                         index={baseIndex + itemIndex}
-                        isLast={itemIndex === section.items.length - 1}
-                      />
+                        slideDistance={30}
+                      >
+                        <View>
+                          <ListItem
+                            title={item.label}
+                            icon={item.icon}
+                            onPress={item.onPress}
+                            showChevron
+                          />
+                          {itemIndex < section.items.length - 1 && (
+                            <View style={styles.separator} />
+                          )}
+                        </View>
+                      </AnimatedEntry>
                     ))}
-                  </View>
+                  </GlassCard>
                 </View>
               );
             })}
@@ -231,29 +186,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 4,
   },
-  groupCard: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  itemContainer: {},
-  itemInner: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
   separator: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     marginLeft: 76,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

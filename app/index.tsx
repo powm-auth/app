@@ -1,12 +1,14 @@
 import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import {
+  AnimatedEntry,
   BackgroundImage,
   Column,
+  GlassCard,
   PowmIcon,
   PowmText,
   Row,
   TicketCard,
-} from '@/components/powm';
+} from '@/components';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -21,46 +23,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-/**
- * Animated wrapper for home items (Entrance animation)
- */
-const AnimatedItem = ({
-  children,
-  index,
-  style,
-}: {
-  children: React.ReactNode;
-  index: number;
-  style?: any;
-}) => {
-  const translateY = useRef(new Animated.Value(50)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 600,
-        delay: index * 100,
-        easing: Easing.out(Easing.back(1)),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 500,
-        delay: index * 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={[{ opacity, transform: [{ translateY }] }, style]}>
-      {children}
-    </Animated.View>
-  );
-};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -157,7 +119,7 @@ export default function HomeScreen() {
           </Row>
 
           {/* 1. SHINY QR Code Scanner Card */}
-          <AnimatedItem index={0}>
+          <AnimatedEntry index={0}>
             <Pressable
               onPress={() => router.push('/scan')}
               style={({ pressed }) => [
@@ -216,22 +178,19 @@ export default function HomeScreen() {
                 </View>
               </ImageBackground>
             </Pressable>
-          </AnimatedItem>
+          </AnimatedEntry>
 
           {/* ID Tickets Section */}
           <Column gap={powmSpacing.sm} style={styles.ticketsSection}>
-            <AnimatedItem index={1}>
+            <AnimatedEntry index={1}>
               <PowmText variant="subtitle" style={{ marginLeft: 4, marginBottom: 4 }}>
                 ID Tickets
               </PowmText>
-            </AnimatedItem>
+            </AnimatedEntry>
 
             {/* 2. Create an ID Ticket */}
-            <AnimatedItem index={2}>
-              <Pressable
-                onPress={() => router.push('/create-ticket')}
-                style={styles.glassCard}
-              >
+            <AnimatedEntry index={2}>
+              <GlassCard onPress={() => router.push('/create-ticket')}>
                 <Row gap={16} align="center">
                   <View
                     style={[
@@ -254,12 +213,12 @@ export default function HomeScreen() {
                     </PowmText>
                   </Column>
                 </Row>
-              </Pressable>
-            </AnimatedItem>
+              </GlassCard>
+            </AnimatedEntry>
 
-            {/* 3. Name Ticket (Updated: Clickable, No "See" button) */}
-            <AnimatedItem index={3}>
-              <View style={styles.glassCard}>
+            {/* 3. Name Ticket */}
+            <AnimatedEntry index={3}>
+              <GlassCard padding={0}>
                  <TicketCard
                     icon={{
                       name: 'powmLogo',
@@ -269,13 +228,11 @@ export default function HomeScreen() {
                     }}
                     title="Name"
                     subtitle="First and Lastname Proof"
-                    // REMOVED showSeeButton
-                    // ADDED onPress to open modal
                     onPress={handleSeeTicket}
-                    style={{ backgroundColor: 'transparent', padding: 0 }}
+                    style={{ backgroundColor: 'transparent', padding: 16 }}
                   />
-              </View>
-            </AnimatedItem>
+              </GlassCard>
+            </AnimatedEntry>
           </Column>
           
           <View style={{ height: 100 }} />
@@ -292,7 +249,7 @@ export default function HomeScreen() {
           )}
         </Pressable>
 
-        {/* Ticket Modal (REDESIGNED) */}
+        {/* Ticket Modal */}
         {showTicketModal && currentTicket && (
           <>
             <Pressable
@@ -300,32 +257,29 @@ export default function HomeScreen() {
               onPress={() => setShowTicketModal(false)}
             />
             <View style={styles.modalContainer}>
-              {/* Redesigned Darker Shiny Card */}
               <ImageBackground
                 source={require('@/assets/powm/illustrations/powm_draw.png')}
                 style={styles.modalCard}
                 imageStyle={styles.modalCardImage}
                 resizeMode="cover"
               >
-                {/* Darker Gradient Base */}
                 <LinearGradient
                   colors={[
-                    '#0f0718', // Almost black purple
-                    '#1a1625', // Dark grey
-                    '#120b29', // Deep indigo
+                    '#0f0718', 
+                    '#1a1625', 
+                    '#120b29', 
                   ]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={[StyleSheet.absoluteFill, { opacity: 0.95 }]} // High opacity for darkness
+                  style={[StyleSheet.absoluteFill, { opacity: 0.95 }]}
                 />
 
-                {/* Subtle Living Shine (Reusing animation but darker colors) */}
                 <Animated.View style={[StyleSheet.absoluteFill, { opacity: gradientShine }]}>
                   <LinearGradient
                     colors={[
-                      'rgba(88, 28, 135, 0.1)', // Very subtle deep purple
-                      'rgba(0, 0, 0, 0)',       // Transparent middle
-                      'rgba(124, 58, 237, 0.15)', // Subtle violet
+                      'rgba(88, 28, 135, 0.1)', 
+                      'rgba(0, 0, 0, 0)',       
+                      'rgba(124, 58, 237, 0.15)', 
                     ]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
@@ -333,7 +287,6 @@ export default function HomeScreen() {
                   />
                 </Animated.View>
 
-                {/* Border Glow (Static or Animated) */}
                 <View style={styles.modalBorderOverlay} />
 
                 <View style={styles.modalCardContent}>
@@ -375,7 +328,7 @@ export default function HomeScreen() {
                          <View style={styles.modalQrCode}>
                            <PowmIcon
                              name="qrcode"
-                             size={90} // Slightly larger
+                             size={90} 
                              color={powmColors.mainBackground}
                            />
                          </View>
@@ -385,7 +338,6 @@ export default function HomeScreen() {
                 </View>
               </ImageBackground>
               
-              {/* Close hint */}
               <Pressable onPress={() => setShowTicketModal(false)} style={{alignItems: 'center', marginTop: 20}}>
                  <View style={{width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center'}}>
                     <PowmIcon name="cross" size={20} color="rgba(255,255,255,0.5)" />
@@ -434,14 +386,6 @@ const styles = StyleSheet.create({
     backgroundColor: powmColors.orangeElectricMain,
     borderWidth: 1,
     borderColor: 'rgba(42, 40, 52, 0.8)',
-  },
-  glassCard: {
-    backgroundColor: 'rgba(30, 28, 40, 0.6)',
-    borderRadius: powmRadii.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    marginBottom: powmSpacing.sm,
   },
   iconCircle: {
     width: 44,
@@ -496,21 +440,20 @@ const styles = StyleSheet.create({
   // --- Redesigned Modal Styles ---
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)', // Darker background for focus
+    backgroundColor: 'rgba(0, 0, 0, 0.9)', 
     zIndex: 998,
   },
   modalContainer: {
     position: 'absolute',
-    top: '25%', // Slightly higher
+    top: '25%', 
     left: powmSpacing.lg,
     right: powmSpacing.lg,
     zIndex: 999,
   },
   modalCard: {
-    borderRadius: 24, // More rounded
+    borderRadius: 24, 
     overflow: 'hidden',
     backgroundColor: '#0f0718',
-    // Deep shadow for floating effect
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.6,
@@ -518,18 +461,14 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   modalCardImage: {
-    opacity: 0.4, // Darker image
+    opacity: 0.4, 
     transform: [{ translateX: -800 }, { translateY: -500 }, { scale: 0.4 }],
-  },
-  modalCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalBorderOverlay: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)', // Subtle inner border
+    borderColor: 'rgba(255,255,255,0.1)', 
   },
   modalCardContent: {
     padding: 24,

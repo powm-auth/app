@@ -1,4 +1,4 @@
-import { PowmText } from '@/components/powm';
+import { PowmText } from './ui';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { Bell, CheckCircle, Shield, X } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';

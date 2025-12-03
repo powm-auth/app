@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, StyleSheet, TextStyle } from 'react-native';
+import { Text, StyleSheet, TextStyle, StyleProp } from 'react-native';
 import { powmTypography, powmColors } from '@/theme/powm-tokens';
 
 /**
@@ -30,7 +30,7 @@ export interface PowmTextProps {
   variant?: PowmTextVariant;
   color?: string;
   align?: 'left' | 'center' | 'right' | 'auto';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }
 
@@ -42,15 +42,14 @@ export const PowmText: React.FC<PowmTextProps> = ({
   style,
   numberOfLines,
 }) => {
-  const textStyle: TextStyle = {
+  const baseStyle: TextStyle = {
     ...powmTypography[variant],
     color,
     textAlign: align,
-    ...(style as TextStyle),
   };
 
   return (
-    <Text style={textStyle} numberOfLines={numberOfLines}>
+    <Text style={[baseStyle, style]} numberOfLines={numberOfLines}>
       {children}
     </Text>
   );

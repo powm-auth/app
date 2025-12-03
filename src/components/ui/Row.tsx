@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 
 /**
  * Row Component
@@ -19,7 +19,7 @@ export interface RowProps {
   gap?: number;
   align?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
   justify?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   flex?: number;
 }
 
@@ -31,16 +31,15 @@ export const Row: React.FC<RowProps> = ({
   style,
   flex,
 }) => {
-  const rowStyle: ViewStyle = {
+  const baseStyle: ViewStyle = {
     ...styles.base,
     gap,
     alignItems: align,
     justifyContent: justify,
     ...(flex !== undefined && { flex }),
-    ...(style as ViewStyle),
   };
 
-  return <View style={rowStyle}>{children}</View>;
+  return <View style={[baseStyle, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({

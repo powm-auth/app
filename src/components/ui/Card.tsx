@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Pressable } from 'react-native';
+import { View, StyleSheet, ViewStyle, Pressable, StyleProp } from 'react-native';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 
 /**
@@ -23,7 +23,7 @@ import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 export interface CardProps {
   children: React.ReactNode;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'alt';
   padding?: number;
   borderRadius?: number;
@@ -37,27 +37,26 @@ export const Card: React.FC<CardProps> = ({
   padding = powmSpacing.base,
   borderRadius = powmRadii.md,
 }) => {
-  const cardStyle: ViewStyle = {
+  const baseStyle: ViewStyle = {
     ...styles.base,
     backgroundColor:
       variant === 'default' ? powmColors.mainBackgroundAlt : powmColors.mainBackground,
     padding,
     borderRadius,
-    ...(style as ViewStyle),
   };
 
   if (onPress) {
     return (
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [cardStyle, pressed && styles.pressed]}
+        style={({ pressed }) => [baseStyle, style, pressed && styles.pressed]}
       >
         {children}
       </Pressable>
     );
   }
 
-  return <View style={cardStyle}>{children}</View>;
+  return <View style={[baseStyle, style]}>{children}</View>;
 };
 
 const styles = StyleSheet.create({

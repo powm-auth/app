@@ -1,4 +1,4 @@
-import { FootBar } from '@/components/powm';
+import { FootBar } from '@/components';
 import { powmColors } from '@/theme/powm-tokens';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

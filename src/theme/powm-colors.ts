@@ -31,6 +31,15 @@ export const powmColors = {
   // Deletion/Error
   deletionRedHard: '#7B2425',
   deletionRedAlt: '#4D1617',
+
+  // Glass Morphism
+  glass: {
+    background: 'rgba(30, 28, 40, 0.6)',
+    border: 'rgba(255, 255, 255, 0.05)',
+    pressed: 'rgba(255, 255, 255, 0.03)',
+    iconBackground: 'rgba(255, 255, 255, 0.07)',
+    separator: 'rgba(255, 255, 255, 0.05)',
+  },
 } as const;
 
 export type PowmColorToken = keyof typeof powmColors;
