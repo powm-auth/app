@@ -71,7 +71,7 @@ export default function ScanScreen() {
         <CameraView 
           style={StyleSheet.absoluteFill} 
           facing="back" 
-          // ✅ Disable the listener if we have already scanned
+          // Disable the listener if we have already scanned
           onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         >
           
