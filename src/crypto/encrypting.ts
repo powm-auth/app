@@ -53,7 +53,9 @@ async function deriveKeyAsync(
 
     let sharedSecret: Buffer;
     if (curve === 'x25519') {
-        sharedSecret = crypto.diffieHellman({ privateKey: localPrivateKey, publicKey: remotePublicKey }) as any;
+        // X25519 ECDH using native crypto
+        const result = crypto.diffieHellman({ privateKey: localPrivateKey, publicKey: remotePublicKey });
+        sharedSecret = Buffer.from(result as any);
     } else {
         // For EC curves (P-256, P-384), use elliptic library
         const curveName = curve === 'P-256' ? 'p256' : 'p384';
@@ -114,9 +116,19 @@ export function isSchemeSupported(scheme: string): boolean {
 
 export function generateKeyPair(scheme: string): { privateKey: Buffer; publicKeySpkiDer: Buffer } {
     const curve = getCurve(scheme);
-    const { privateKey, publicKey } = curve === 'x25519'
-        ? crypto.generateKeyPairSync('x25519')
-        : crypto.generateKeyPairSync('ec', { namedCurve: curve });
+
+    if (curve === 'x25519') {
+        const { privateKey, publicKey } = crypto.generateKeyPairSync('x25519', {
+            publicKeyEncoding: { type: 'spki', format: 'der' },
+            privateKeyEncoding: { type: 'pkcs8', format: 'der' }
+        });
+        return {
+            privateKey: Buffer.from(privateKey as unknown as Uint8Array),
+            publicKeySpkiDer: Buffer.from(publicKey as unknown as Uint8Array),
+        };
+    }
+
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', { namedCurve: curve });
 
     return {
         privateKey: (privateKey as any).export({ type: 'pkcs8', format: 'der' }) as Buffer,
@@ -124,6 +136,15 @@ export function generateKeyPair(scheme: string): { privateKey: Buffer; publicKey
     };
 }
 
+/**
+ * Encrypt plaintext using ECDH key agreement and AES-256-GCM
+ * @param scheme - Encryption scheme (e.g., 'ecdhx25519_hkdfsha256_aes256gcm')
+ * @param localPrivateKey - Local private key for ECDH
+ * @param remotePublicKey - Remote public key for ECDH
+ * @param plaintext - Data to encrypt
+ * @param aad - Optional additional authenticated data
+ * @returns Nonce and ciphertext (includes auth tag)
+ */
 export async function encrypt(
     scheme: string,
     localPrivateKey: KeyObject | Buffer | string,
@@ -131,14 +152,33 @@ export async function encrypt(
     plaintext: Buffer,
     aad?: Buffer
 ): Promise<{ nonce: Buffer; ciphertext: Buffer }> {
-    const key = await deriveKeyAsync(scheme, toKeyObject(localPrivateKey as any, true), toKeyObject(remotePublicKey as any, false));
+    const localKey = toKeyObject(localPrivateKey, true);
+    const remoteKey = toKeyObject(remotePublicKey, false);
+    const key = await deriveKeyAsync(scheme, localKey, remoteKey);
+
     const nonce = crypto.randomBytes(12);
-    const cipherInst = crypto.createCipheriv(getCipher(scheme), key, nonce) as any;
-    if (aad) cipherInst.setAAD(aad);
-    const encrypted = Buffer.concat([cipherInst.update(plaintext), cipherInst.final(), cipherInst.getAuthTag()]);
+    const cipher = crypto.createCipheriv(getCipher(scheme), key, nonce);
+    if (aad) cipher.setAAD(aad as any);
+
+    const encrypted = Buffer.concat([
+        cipher.update(plaintext),
+        cipher.final(),
+        cipher.getAuthTag()
+    ]);
+
     return { nonce: nonce as any, ciphertext: encrypted as any };
 }
 
+/**
+ * Decrypt ciphertext using ECDH key agreement and AES-256-GCM
+ * @param scheme - Encryption scheme (e.g., 'ecdhx25519_hkdfsha256_aes256gcm')
+ * @param localPrivateKey - Local private key for ECDH
+ * @param remotePublicKey - Remote public key for ECDH
+ * @param nonce - Nonce used during encryption
+ * @param ciphertext - Encrypted data (includes auth tag at end)
+ * @param aad - Optional additional authenticated data
+ * @returns Decrypted plaintext
+ */
 export async function decrypt(
     scheme: string,
     localPrivateKey: KeyObject | Buffer | string,
@@ -147,11 +187,21 @@ export async function decrypt(
     ciphertext: Buffer,
     aad?: Buffer
 ): Promise<Buffer> {
-    const key = await deriveKeyAsync(scheme, toKeyObject(localPrivateKey as any, true), toKeyObject(remotePublicKey as any, false));
-    const ciphertextBuf = ciphertext;
-    if (ciphertextBuf.length < 16) throw new Error('Ciphertext too short (missing auth tag)');
-    const decipher = crypto.createDecipheriv(getCipher(scheme), key, nonce) as any;
-    decipher.setAuthTag(ciphertextBuf.subarray(ciphertextBuf.length - 16));
-    if (aad) decipher.setAAD(aad);
-    return Buffer.concat([decipher.update(ciphertextBuf.subarray(0, -16)), decipher.final()]);
+    if (ciphertext.length < 16) {
+        throw new Error('Ciphertext too short (missing auth tag)');
+    }
+
+    const localKey = toKeyObject(localPrivateKey, true);
+    const remoteKey = toKeyObject(remotePublicKey, false);
+    const key = await deriveKeyAsync(scheme, localKey, remoteKey);
+
+    // Last 16 bytes are the auth tag
+    const authTag = ciphertext.subarray(ciphertext.length - 16);
+    const encryptedData = ciphertext.subarray(0, -16);
+
+    const decipher = crypto.createDecipheriv(getCipher(scheme), key, nonce);
+    decipher.setAuthTag(authTag as any);
+    if (aad) decipher.setAAD(aad as any);
+
+    return Buffer.concat([decipher.update(encryptedData), decipher.final()]);
 }

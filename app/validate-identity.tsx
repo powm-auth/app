@@ -14,6 +14,19 @@ import React, { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const getEncryptionSchemeName = (scheme: string) => {
+  switch (scheme) {
+    case 'ecdhx25519_hkdfsha256_aes256gcm':
+      return 'X25519 (Modern High-Performance)';
+    case 'ecdhp256_hkdfsha256_aes256gcm':
+      return 'P-256 (NIST Standard)';
+    case 'ecdhp384_hkdfsha384_aes256gcm':
+      return 'P-384 (High Security)';
+    default:
+      return scheme;
+  }
+};
+
 export default function ValidateIdentityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -86,6 +99,10 @@ export default function ValidateIdentityScreen() {
               <PowmText variant="text" color={powmColors.gray} style={[styles.descriptionText, { marginTop: powmSpacing.sm }]}>
                 Do you accept to share this information with {appName}?
               </PowmText>
+
+              <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 11, marginTop: powmSpacing.sm, textAlign: 'right' }}>
+                Encryption: {getEncryptionSchemeName(claimResponse.challenge.encrypting_scheme)}
+              </PowmText>
             </Column>
           </GlassCard>
 
@@ -101,7 +118,6 @@ export default function ValidateIdentityScreen() {
                 try {
                   setRejecting(true);
                   await rejectChallenge(challengeId, TEST_WALLET, claimResponse);
-                  Alert.alert('Challenge Rejected', 'You have rejected this identity verification request.');
                   router.replace('/');
                 } catch (error) {
                   console.error('Reject error:', error);
@@ -121,14 +137,8 @@ export default function ValidateIdentityScreen() {
               onPress={async () => {
                 try {
                   setAccepting(true);
-
                   await acceptChallenge(challengeId, TEST_WALLET, claimResponse);
-
-                  Alert.alert(
-                    'Success',
-                    'Identity shared successfully!',
-                    [{ text: 'OK', onPress: handleReturnHome }]
-                  );
+                  router.replace('/');
                 } catch (error) {
                   console.error('Accept failed:', error);
                   Alert.alert(

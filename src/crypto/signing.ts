@@ -26,24 +26,35 @@ export function isSchemeSupported(scheme: string): boolean {
     return normalizeScheme(scheme) in HASH_MAP;
 }
 
+/**
+ * Sign data with private key
+ * @param scheme - Signature scheme (e.g., 'ecdsap256_sha256', 'eddsaed25519')
+ * @param privateKey - Private key for signing (PEM, DER, or KeyObject)
+ * @param data - Data to sign
+ * @returns Digital signature
+ */
 export function sign(scheme: string, privateKey: KeyObject | Buffer | string, data: Buffer): Buffer {
     const keyObj = toKeyObject(privateKey, true);
     const hashAlgo = getHashAlgo(scheme);
 
-    // Create Sign object
     const signer = crypto.createSign(hashAlgo || 'sha256');
     signer.update(data);
-    const signature = signer.sign(keyObj) as any;
-    return signature;
+    return Buffer.from(signer.sign(keyObj));
 }
 
+/**
+ * Verify signature with public key
+ * @param scheme - Signature scheme (e.g., 'ecdsap256_sha256', 'eddsaed25519')
+ * @param publicKey - Public key for verification (PEM, DER, or KeyObject)
+ * @param data - Original data that was signed
+ * @param signature - Signature to verify
+ * @returns True if signature is valid, false otherwise
+ */
 export function verify(scheme: string, publicKey: KeyObject | Buffer | string, data: Buffer, signature: Buffer): boolean {
     const keyObj = toKeyObject(publicKey, false);
     const hashAlgo = getHashAlgo(scheme);
 
-    // Create Verify object
     const verifier = crypto.createVerify(hashAlgo || 'sha256');
     verifier.update(data);
-    const isValid = verifier.verify(keyObj, signature) as any;
-    return isValid;
+    return Boolean(verifier.verify(keyObj, signature));
 }

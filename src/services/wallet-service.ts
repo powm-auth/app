@@ -157,9 +157,9 @@ export async function acceptChallenge(
     );
 
     // Convert to base64
-    const walletKeyB64 = btoa(String.fromCharCode(...ephemeralKeys.publicKeySpkiDer));
-    const nonceB64 = btoa(String.fromCharCode(...(nonce as any)));
-    const ciphertextB64 = btoa(String.fromCharCode(...(ciphertext as any)));
+    const walletKeyB64 = Buffer.from(ephemeralKeys.publicKeySpkiDer).toString('base64');
+    const nonceB64 = Buffer.from(nonce).toString('base64');
+    const ciphertextB64 = Buffer.from(ciphertext).toString('base64');
 
     // Generate nonce and timestamp for signing
     const randomBytes = new Uint8Array(32);

@@ -29,6 +29,15 @@ export function validate(scheme: string, hash: Buffer): boolean {
     return expectedSize !== undefined && hash.length === expectedSize;
 }
 
+/**
+ * Compute HMAC hash of input data
+ * @param scheme - Hashing scheme (e.g., 'hmacsha256', 'hmacsha512')
+ * @param key - Secret key for HMAC
+ * @param input - Data to hash
+ * @returns HMAC digest
+ */
 export function hash(scheme: string, key: Buffer, input: Buffer): Buffer {
-    return crypto.createHmac(getHashAlgo(scheme), key).update(input).digest() as any;
+    const hmac = crypto.createHmac(getHashAlgo(scheme), key);
+    hmac.update(input);
+    return Buffer.from(hmac.digest());
 }
