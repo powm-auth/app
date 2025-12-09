@@ -8,6 +8,19 @@ import type { AcceptChallengeRequest, ClaimChallengeRequest, ClaimChallengeRespo
 // Android emulator uses 10.0.2.2 to reach host machine's localhost
 // For iOS simulator use 'localhost', for physical device use computer's IP
 const POWM_API_BASE = 'http://10.0.2.2:4443/api';
+const REQUEST_TIMEOUT = 10000; // 10 seconds
+
+/**
+ * Fetch with timeout
+ */
+function fetchWithTimeout(url: string, options: RequestInit, timeout: number = REQUEST_TIMEOUT): Promise<Response> {
+    return Promise.race([
+        fetch(url, options),
+        new Promise<Response>((_, reject) =>
+            setTimeout(() => reject(new Error('Request timeout - server did not respond within 10 seconds')), timeout)
+        )
+    ]);
+}
 
 export class PowmApiError extends Error {
     constructor(
@@ -26,7 +39,7 @@ export class PowmApiError extends Error {
 export async function getIdentityChallenge(
     challengeId: string
 ): Promise<IdentityChallenge> {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
         `${POWM_API_BASE}/identity-challenges/${challengeId}`,
         {
             method: 'GET',
@@ -59,7 +72,7 @@ export async function claimIdentityChallenge(
         request
     });
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
         `${POWM_API_BASE}/identity-challenges/claim`,
         {
             method: 'POST',
@@ -176,7 +189,7 @@ export async function rejectIdentityChallenge(request: {
     identity_hash: string;
     wallet_signature: string;
 }): Promise<any> {
-    const response = await fetch(`${POWM_API_BASE}/identity-challenges/reject`, {
+    const response = await fetchWithTimeout(`${POWM_API_BASE}/identity-challenges/reject`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

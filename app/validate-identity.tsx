@@ -3,6 +3,7 @@ import {
   Button,
   Column,
   GlassCard,
+  LoadingOverlay,
   PowmText
 } from '@/components';
 import { TEST_WALLET } from '@/data/test-wallet';
@@ -33,6 +34,7 @@ export default function ValidateIdentityScreen() {
   const params = useLocalSearchParams();
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
 
   const challengeId = params.challengeId as string;
   const claimResponse: ClaimChallengeResponse = params.claimData
@@ -117,10 +119,13 @@ export default function ValidateIdentityScreen() {
               onPress={async () => {
                 try {
                   setRejecting(true);
+                  setLoadingMessage('Rejecting challenge...');
                   await rejectChallenge(challengeId, TEST_WALLET, claimResponse);
+                  setLoadingMessage(null);
                   router.replace('/');
                 } catch (error) {
                   console.error('Reject error:', error);
+                  setLoadingMessage(null);
                   Alert.alert('Error', 'Failed to reject challenge. Please try again.');
                 } finally {
                   setRejecting(false);
@@ -137,10 +142,13 @@ export default function ValidateIdentityScreen() {
               onPress={async () => {
                 try {
                   setAccepting(true);
+                  setLoadingMessage('Accepting challenge...');
                   await acceptChallenge(challengeId, TEST_WALLET, claimResponse);
+                  setLoadingMessage(null);
                   router.replace('/');
                 } catch (error) {
                   console.error('Accept failed:', error);
+                  setLoadingMessage(null);
                   Alert.alert(
                     'Error',
                     error instanceof Error ? error.message : 'Failed to accept challenge',
@@ -154,6 +162,7 @@ export default function ValidateIdentityScreen() {
           </View>
         </View>
 
+        <LoadingOverlay visible={loadingMessage !== null} message={loadingMessage || undefined} />
       </View>
     </BackgroundImage>
   );

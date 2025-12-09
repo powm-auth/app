@@ -1,4 +1,4 @@
-import { PowmIcon, PowmText } from '@/components';
+import { LoadingOverlay, PowmIcon, PowmText } from '@/components';
 import { CameraPermissionGuard } from '@/components/scanner/CameraPermissionGuard';
 import { ScannerOverlay } from '@/components/scanner/ScannerOverlay';
 import { TEST_WALLET } from '@/data/test-wallet';
@@ -22,12 +22,14 @@ export default function ScanScreen() {
   // PREVENT MULTIPLE SCANS
   // This state locks the scanner after the first read to prevent the "freeze" bug
   const [scanned, setScanned] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // RESET ON FOCUS
   // Automatically re-enable the scanner when the user comes back to this screen
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
+      setLoading(false);
     }, [])
   );
 
@@ -46,9 +48,10 @@ export default function ScanScreen() {
   });
 
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
-    if (scanned) return;
+    if (scanned || loading) return;
 
     setScanned(true);
+    setLoading(true);
     console.log('Scanned:', data);
 
     try {
@@ -59,6 +62,8 @@ export default function ScanScreen() {
       // Claim the challenge with the wallet
       const claimResponse = await claimChallenge(challengeId, TEST_WALLET);
       console.log('Challenge claimed successfully:', claimResponse);
+
+      setLoading(false);
 
       // Navigate to validation screen with challenge data
       router.push({
@@ -71,6 +76,7 @@ export default function ScanScreen() {
 
     } catch (error) {
       console.error('Scan failed:', error);
+      setLoading(false);
 
       // Show error to user
       Alert.alert(
@@ -155,6 +161,8 @@ export default function ScanScreen() {
           </View>
 
         </CameraView>
+
+        <LoadingOverlay visible={loading} message="Acquiring challenge..." />
       </View>
     </CameraPermissionGuard>
   );
