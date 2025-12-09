@@ -1,12 +1,14 @@
-import { PowmIcon, PowmText } from '@/components';
+import { LoadingOverlay, PowmIcon, PowmText } from '@/components';
 import { CameraPermissionGuard } from '@/components/scanner/CameraPermissionGuard';
 import { ScannerOverlay } from '@/components/scanner/ScannerOverlay';
+import { TEST_WALLET } from '@/data/test-wallet';
+import { claimChallenge, parseChallengeId } from '@/services/wallet-service';
 import { powmColors } from '@/theme/powm-tokens';
 import { CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Easing, Pressable, StatusBar, StyleSheet, View } from 'react-native';
+import { Alert, Animated, Dimensions, Easing, Pressable, StatusBar, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -20,12 +22,14 @@ export default function ScanScreen() {
   // PREVENT MULTIPLE SCANS
   // This state locks the scanner after the first read to prevent the "freeze" bug
   const [scanned, setScanned] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // RESET ON FOCUS
   // Automatically re-enable the scanner when the user comes back to this screen
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
+      setLoading(false);
     }, [])
   );
 
@@ -44,22 +48,42 @@ export default function ScanScreen() {
   });
 
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
-    if (scanned) return;
-    
+    if (scanned || loading) return;
+
     setScanned(true);
+    setLoading(true);
     console.log('Scanned:', data);
 
     try {
-      // ---------------------------------------------------------
-      // @Jean - IMPLEMENT BACKEND LOGIC HERE
-      // ---------------------------------------------------------
+      // Parse challenge ID from scanned data (supports powm:// prefix)
+      const challengeId = parseChallengeId(data);
+      console.log('Challenge ID:', challengeId);
 
-      // For now, just navigate:
-      router.push('/validate-identity');
+      // Claim the challenge with the wallet
+      const claimResponse = await claimChallenge(challengeId, TEST_WALLET);
+      console.log('Challenge claimed successfully:', claimResponse);
+
+      setLoading(false);
+
+      // Navigate to validation screen with challenge data
+      router.push({
+        pathname: '/validate-identity',
+        params: {
+          challengeId,
+          claimData: JSON.stringify(claimResponse),
+        },
+      });
 
     } catch (error) {
-      console.error("Scan failed", error);
-      setScanned(false); 
+      console.error('Scan failed:', error);
+      setLoading(false);
+
+      // Show error to user
+      Alert.alert(
+        'Scan Failed',
+        error instanceof Error ? error.message : 'Failed to process challenge',
+        [{ text: 'OK', onPress: () => setScanned(false) }]
+      );
     }
   };
 
@@ -67,14 +91,14 @@ export default function ScanScreen() {
     <CameraPermissionGuard>
       <View style={styles.container}>
         <StatusBar barStyle="light-content" translucent />
-        
-        <CameraView 
-          style={StyleSheet.absoluteFill} 
-          facing="back" 
+
+        <CameraView
+          style={StyleSheet.absoluteFill}
+          facing="back"
           // Disable the listener if we have already scanned
           onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         >
-          
+
           <ScannerOverlay windowSize={SCAN_SIZE}>
             {/* Markers */}
             <View style={[styles.corner, styles.topLeft]} />
@@ -84,10 +108,10 @@ export default function ScanScreen() {
 
             {/* Laser */}
             <Animated.View style={[styles.laserContainer, { transform: [{ translateY }] }]}>
-              <LinearGradient 
-                colors={['rgba(160,107,255,0)', 'rgba(160,107,255,0.8)', 'rgba(160,107,255,0)']} 
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} 
-                style={styles.laserLine} 
+              <LinearGradient
+                colors={['rgba(160,107,255,0)', 'rgba(160,107,255,0.8)', 'rgba(160,107,255,0)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={styles.laserLine}
               />
             </Animated.View>
           </ScannerOverlay>
@@ -95,35 +119,50 @@ export default function ScanScreen() {
           {/* Controls Overlay (Header) */}
           <View style={[styles.header, { top: insets.top + 10 }]}>
             <Pressable onPress={() => router.back()} style={styles.iconButton}>
-               <PowmIcon name="cross" size={20} color={powmColors.white} />
+              <PowmIcon name="cross" size={20} color={powmColors.white} />
             </Pressable>
             <View style={styles.badge}>
               <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>Scan Code</PowmText>
             </View>
-            <View style={{ width: 40 }} /> 
+            <View style={{ width: 40 }} />
           </View>
 
           {/* Bottom Hint */}
           <View style={styles.bottomHint}>
-             <PowmText variant="text" color="rgba(255,255,255,0.7)">
-               Align the QR code within the frame
-             </PowmText>
-             
-             {/* Test Button (Respects scanned state) */}
-             <Pressable 
-               style={styles.testButton} 
-               onPress={() => {
-                 if (!scanned) {
-                   setScanned(true);
-                   router.push('/validate-identity');
-                 }
-               }}
-             >
-               <PowmText variant="text" color={powmColors.white}>[TEST] Validate</PowmText>
-             </Pressable>
+            <PowmText variant="text" color="rgba(255,255,255,0.7)">
+              Align the QR code within the frame
+            </PowmText>
+
+            {/* Test Button (Respects scanned state) */}
+            <Pressable
+              style={styles.testButton}
+              onPress={async () => {
+                if (!scanned) {
+                  setScanned(true);
+                  try {
+                    // Test with a mock challenge ID
+                    const testChallengeId = 'chl_test123456789';
+                    const claimResponse = await claimChallenge(testChallengeId, TEST_WALLET);
+                    console.log('Test claim successful:', claimResponse);
+                    router.push('/validate-identity');
+                  } catch (error) {
+                    console.error('Test claim failed:', error);
+                    Alert.alert(
+                      'Test Failed',
+                      error instanceof Error ? error.message : 'Failed to claim test challenge',
+                      [{ text: 'OK', onPress: () => setScanned(false) }]
+                    );
+                  }
+                }
+              }}
+            >
+              <PowmText variant="text" color={powmColors.white}>[TEST] Validate</PowmText>
+            </Pressable>
           </View>
 
         </CameraView>
+
+        <LoadingOverlay visible={loading} message="Acquiring challenge..." />
       </View>
     </CameraPermissionGuard>
   );
