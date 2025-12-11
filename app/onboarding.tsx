@@ -13,7 +13,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, ActionSheetIOS, Modal } from 'react-native';
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -59,7 +59,6 @@ const STEPS = [
         description: 'Let\'s start with your basic information',
         fields: [
             { key: 'first_name', label: 'First Name', required: true, type: 'text' },
-            { key: 'middle_names', label: 'Middle Names (optional)', required: false, type: 'text' },
             { key: 'last_name', label: 'Last Name', required: true, type: 'text' },
         ]
     },
@@ -180,6 +179,21 @@ export default function OnboardingScreen() {
         const displayName = typeof country.name === 'string' ? country.name : (country.name?.common || '');
         setCountryNames(prev => ({ ...prev, [fieldKey]: displayName }));
         setActiveCountryPicker(null);
+    };
+
+    const handleGenderSelectIOS = () => {
+        ActionSheetIOS.showActionSheetWithOptions(
+            {
+                options: ['Cancel', ...GENDERS],
+                cancelButtonIndex: 0,
+                userInterfaceStyle: 'dark',
+            },
+            (buttonIndex) => {
+                if (buttonIndex > 0) {
+                    updateField('gender', GENDERS[buttonIndex - 1]);
+                }
+            }
+        );
     };
 
     const canProceed = () => {
@@ -478,15 +492,44 @@ export default function OnboardingScreen() {
                                                         {identityData.date_of_birth || 'Select date of birth'}
                                                     </PowmText>
                                                 </Pressable>
-                                                {showDatePicker && (
-                                                    <DateTimePicker
-                                                        value={dateValue}
-                                                        mode="date"
-                                                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                                        onChange={handleDateChange}
-                                                        maximumDate={new Date()}
-                                                        minimumDate={new Date(1900, 0, 1)}
-                                                    />
+                                                {Platform.OS === 'ios' ? (
+                                                    <Modal
+                                                        transparent={true}
+                                                        animationType="slide"
+                                                        visible={showDatePicker}
+                                                        onRequestClose={() => setShowDatePicker(false)}
+                                                    >
+                                                        <View style={styles.modalContainer}>
+                                                            <View style={styles.modalContent}>
+                                                                <View style={styles.modalHeader}>
+                                                                    <Pressable onPress={() => setShowDatePicker(false)}>
+                                                                        <PowmText style={styles.modalDoneButton}>Done</PowmText>
+                                                                    </Pressable>
+                                                                </View>
+                                                                <DateTimePicker
+                                                                    value={dateValue}
+                                                                    mode="date"
+                                                                    display="spinner"
+                                                                    onChange={handleDateChange}
+                                                                    maximumDate={new Date()}
+                                                                    minimumDate={new Date(1900, 0, 1)}
+                                                                    textColor="white"
+                                                                    themeVariant="dark"
+                                                                />
+                                                            </View>
+                                                        </View>
+                                                    </Modal>
+                                                ) : (
+                                                    showDatePicker && (
+                                                        <DateTimePicker
+                                                            value={dateValue}
+                                                            mode="date"
+                                                            display="default"
+                                                            onChange={handleDateChange}
+                                                            maximumDate={new Date()}
+                                                            minimumDate={new Date(1900, 0, 1)}
+                                                        />
+                                                    )
                                                 )}
                                             </>
                                         ) : field.type === 'country' ? (
@@ -513,19 +556,30 @@ export default function OnboardingScreen() {
                                                 />
                                             </>
                                         ) : field.type === 'gender' ? (
-                                            <View style={styles.pickerContainer}>
-                                                <Picker
-                                                    selectedValue={identityData.gender}
-                                                    onValueChange={(value) => updateField('gender', value)}
-                                                    style={styles.picker}
-                                                    dropdownIconColor="rgba(255, 255, 255, 0.8)"
+                                            Platform.OS === 'ios' ? (
+                                                <Pressable
+                                                    style={styles.input}
+                                                    onPress={handleGenderSelectIOS}
                                                 >
-                                                    <Picker.Item label="Select gender" value="" />
-                                                    {GENDERS.map(gender => (
-                                                        <Picker.Item key={gender} label={gender} value={gender} />
-                                                    ))}
-                                                </Picker>
-                                            </View>
+                                                    <PowmText style={identityData.gender ? styles.inputText : styles.placeholder}>
+                                                        {identityData.gender || 'Select gender'}
+                                                    </PowmText>
+                                                </Pressable>
+                                            ) : (
+                                                <View style={styles.pickerContainer}>
+                                                    <Picker
+                                                        selectedValue={identityData.gender}
+                                                        onValueChange={(value) => updateField('gender', value)}
+                                                        style={styles.picker}
+                                                        dropdownIconColor="rgba(255, 255, 255, 0.8)"
+                                                    >
+                                                        <Picker.Item label="Select gender" value="" />
+                                                        {GENDERS.map(gender => (
+                                                            <Picker.Item key={gender} label={gender} value={gender} />
+                                                        ))}
+                                                    </Picker>
+                                                </View>
+                                            )
                                         ) : (
                                             <TextInput
                                                 style={styles.input}
@@ -780,5 +834,30 @@ const styles = StyleSheet.create({
         fontSize: 13,
         opacity: 0.7,
         lineHeight: 18,
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContent: {
+        backgroundColor: '#1E1E1E',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 40,
+    },
+    modalHeader: {
+        padding: 16,
+        alignItems: 'flex-end',
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: '#252525',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+    },
+    modalDoneButton: {
+        color: '#0A84FF',
+        fontSize: 18,
+        fontWeight: '600',
     },
 });
