@@ -4,12 +4,17 @@ import {
   Column,
   GlassCard,
   LoadingOverlay,
-  PowmText
+  PowmText,
+  ScreenHeader
 } from '@/components';
-import { TEST_WALLET } from '@/data/test-wallet';
-import { acceptChallenge, rejectChallenge } from '@/services/wallet-service';
+import {
+  acceptChallenge,
+  getCurrentWallet,
+  rejectChallenge
+} from '@/services/wallet-service';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import type { ClaimChallengeResponse } from '@/types/powm';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
@@ -52,8 +57,24 @@ export default function ValidateIdentityScreen() {
   }
 
   const appName = claimResponse.claim.application_display_name;
-  const requestedAttrs = Object.keys(claimResponse.claim.identity_attribute_hashing_salts);
-  const walletAttrs = TEST_WALLET.attributes;
+  const requestedAttrs = claimResponse.challenge.identity_attributes;
+  const wallet = getCurrentWallet();
+  if (!wallet) {
+    return (
+      <BackgroundImage>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+          <ScreenHeader title="Validate Identity" subtitle="Error" />
+          <View style={styles.errorContainer}>
+            <PowmText variant="text" style={styles.errorText}>
+              Wallet not loaded. Please restart the app.
+            </PowmText>
+          </View>
+        </View>
+      </BackgroundImage>
+    );
+  }
+
+  const walletAttrs = wallet.attributes;
 
   const handleReturnHome = () => {
     router.dismissAll();
@@ -89,7 +110,7 @@ export default function ValidateIdentityScreen() {
                     {attr.replace('_', ' ')}:
                   </PowmText>
                   <PowmText variant="text" color={powmColors.electricMain}>
-                    {walletAttrs[attr] || 'Not available'}
+                    {walletAttrs[attr]?.value || 'Not available'}
                   </PowmText>
                 </View>
               ))}
@@ -120,9 +141,9 @@ export default function ValidateIdentityScreen() {
                 try {
                   setRejecting(true);
                   setLoadingMessage('Rejecting challenge...');
-                  await rejectChallenge(challengeId, TEST_WALLET, claimResponse);
+                  await rejectChallenge(challengeId, wallet, claimResponse);
                   setLoadingMessage(null);
-                  router.replace('/');
+                  router.replace('/home');
                 } catch (error) {
                   console.error('Reject error:', error);
                   setLoadingMessage(null);
@@ -141,11 +162,19 @@ export default function ValidateIdentityScreen() {
               icon={accepting ? undefined : "check"}
               onPress={async () => {
                 try {
+                  // Authenticate user before accepting challenge
+                  const result = await LocalAuthentication.authenticateAsync();
+
+                  if (!result.success) {
+                    // User cancelled or authentication failed - just return
+                    return;
+                  }
+
                   setAccepting(true);
                   setLoadingMessage('Accepting challenge...');
-                  await acceptChallenge(challengeId, TEST_WALLET, claimResponse);
+                  await acceptChallenge(challengeId, wallet, claimResponse);
                   setLoadingMessage(null);
-                  router.replace('/');
+                  router.replace('/home');
                 } catch (error) {
                   console.error('Accept failed:', error);
                   setLoadingMessage(null);

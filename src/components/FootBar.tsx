@@ -16,14 +16,14 @@ interface FootBarTab {
 
 const TABS: FootBarTab[] = [
   { name: 'history', label: 'History', icon: 'clock', route: '/history' },
-  { name: 'home', label: 'Home', icon: 'home', route: '/' },
+  { name: 'home', label: 'Home', icon: 'home', route: '/home' },
   { name: 'profile', label: 'Profile', icon: 'profile', route: '/profile' },
 ];
 
 const getIndex = (route: string) => {
-  if (route === '/history') return 0;
-  if (route === '/') return 1;
-  if (route === '/profile') return 2;
+  if (route.includes('/history')) return 0;
+  if (route === '/home' || route === '') return 1;
+  if (route.includes('/profile')) return 2;
   return 1;
 };
 
@@ -33,19 +33,19 @@ export const FootBar: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   // Hide footer on full-screen flows
-  const isHidden = pathname === '/scan' || pathname === '/validate-identity';
+  const isHidden = pathname.includes('/scan') || pathname.includes('/validate-identity');
 
   const isActive = (route: string) => {
-    if (route === '/') {
-      return pathname === '/';
+    if (route === '/home') {
+      return pathname === '/home' || pathname === '/home/';
     }
-    return pathname.startsWith(route);
+    return pathname.includes(route);
   };
 
   return (
-    <View 
+    <View
       style={[
-        styles.container, 
+        styles.container,
         // Collapse padding when hidden
         { paddingBottom: isHidden ? 0 : insets.bottom },
         // Collapse height/opacity when hidden (prevents unmount state loss)
@@ -60,13 +60,13 @@ export const FootBar: React.FC = () => {
               key={tab.name}
               onPress={() => {
                 if (pathname === tab.route) return;
-                
+
                 const currentIndex = getIndex(pathname);
                 const targetIndex = getIndex(tab.route);
                 let transition: string | undefined;
                 if (targetIndex > currentIndex) transition = 'slide_from_right';
                 else if (targetIndex < currentIndex) transition = 'slide_from_left';
-                
+
                 router.push({
                   pathname: tab.route as any,
                   params: transition ? { transition } : {},

@@ -7,9 +7,31 @@ import { encrypt, generateKeyPair } from '@/crypto/encrypting';
 import { hash } from '@/crypto/keyed_hashing';
 import { sign } from '@/crypto/signing';
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
+import { loadWallet } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
 import { Buffer } from 'buffer';
-import crypto from 'react-native-quick-crypto';
+import * as Crypto from 'expo-crypto';
+
+// Current wallet instance cache
+let currentWallet: Wallet | null = null;
+
+/**
+ * Load and cache the current wallet
+ * @param forceReload - If true, reload from storage even if cached
+ */
+export async function loadCurrentWallet(forceReload: boolean = false): Promise<Wallet | null> {
+    if (!currentWallet || forceReload) {
+        currentWallet = await loadWallet();
+    }
+    return currentWallet;
+}
+
+/**
+ * Get the cached current wallet
+ */
+export function getCurrentWallet(): Wallet | null {
+    return currentWallet;
+}
 
 /**
  * Parse challenge ID from scanned data
@@ -45,8 +67,7 @@ export async function claimChallenge(
     wallet: Wallet
 ): Promise<ClaimChallengeResponse> {
     // Generate nonce (32 chars, URL-safe base64)
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const nonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -65,7 +86,7 @@ export async function claimChallenge(
     const dataBytes = encoder.encode(signingString);
 
     const signature = sign(
-        wallet.algorithm,
+        wallet.signing_algorithm,
         wallet.private_key,
         dataBytes as any
     );
@@ -92,41 +113,45 @@ export async function acceptChallenge(
     wallet: Wallet,
     claimResponse: ClaimChallengeResponse
 ): Promise<void> {
-    // Build attribute payload
+    // Build attribute payload and compute hashes using challenge's pre-sorted order
     const attributePayload: Record<string, string> = {};
-    const attributeHashes: Record<string, Uint8Array> = {};
+    const orderedHashes: Uint8Array[] = [];
+    const requestedSalts: Record<string, string> = {};
 
-    const hashingScheme = claimResponse.claim.identity_attribute_hashing_scheme;
-    const salts = claimResponse.claim.identity_attribute_hashing_salts;
+    const hashingScheme = wallet.identity_attribute_hashing_scheme;
+    const requestedAttrs = claimResponse.challenge.identity_attributes;
 
-    // Compute hashes for each requested attribute
-    for (const [attrName, saltB64] of Object.entries(salts)) {
+    // CRITICAL: Use challenge.identity_attributes array order (already sorted by server)
+    // DO NOT sort again - this is the canonical order
+    for (const attrName of requestedAttrs) {
         if (!(attrName in wallet.attributes)) {
-            throw new Error(`Attribute '${attrName}' not found in wallet`);
+            // Wallet doesn't have this attribute - set to null and skip hash computation
+            attributePayload[attrName] = null as any;
+            // Note: We don't compute a hash or include salt for missing attributes
+            continue;
         }
 
-        const attrValue = wallet.attributes[attrName];
-        attributePayload[attrName] = attrValue;
+        const { value, salt } = wallet.attributes[attrName];
+        attributePayload[attrName] = value;
+        requestedSalts[attrName] = salt; // Collect salts for request
 
-        // Decode salt and compute hash
-        const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+        // Decode wallet's salt and compute hash
+        const saltBytes = Uint8Array.from(atob(salt), c => c.charCodeAt(0));
         const encoder = new TextEncoder();
-        const dataBytes = encoder.encode(attrValue);
+        const valueBytes = encoder.encode(value);
 
-        const attrHash = hash(hashingScheme, salt as any, dataBytes as any);
-        attributeHashes[attrName] = attrHash as any;
+        const attrHash = hash(hashingScheme, saltBytes as any, valueBytes as any);
+        orderedHashes.push(attrHash as any);
     }
 
-    // Compute identity hash (HMAC of concatenated attribute hashes using challenge_id as key)
-    const sortedAttrNames = Object.keys(attributeHashes).sort();
-    const combinedHashes = new Uint8Array(
-        sortedAttrNames.reduce((acc, name) => acc + attributeHashes[name].length, 0)
-    );
+    // Concatenate hashes in the order they were computed (challenge's canonical order)
+    const totalLength = orderedHashes.reduce((acc, h) => acc + h.length, 0);
+    const combinedHashes = new Uint8Array(totalLength);
 
     let offset = 0;
-    for (const name of sortedAttrNames) {
-        combinedHashes.set(attributeHashes[name], offset);
-        offset += attributeHashes[name].length;
+    for (const attrHash of orderedHashes) {
+        combinedHashes.set(attrHash, offset);
+        offset += attrHash.length;
     }
 
     const challengeIdBytes = new TextEncoder().encode(challengeId);
@@ -147,10 +172,10 @@ export async function acceptChallenge(
     // Generate ephemeral key pair for encryption
     const ephemeralKeys = generateKeyPair(encryptingScheme);
 
-    // Encrypt using SDK (ephemeralKeys.privateKey is already a Buffer)
+    // Encrypt using SDK (ephemeralKeys.privateKeyPkcs8Der is already a Buffer)
     const { nonce, ciphertext } = await encrypt(
         encryptingScheme,
-        ephemeralKeys.privateKey,
+        ephemeralKeys.privateKeyPkcs8Der,
         appPublicKeyDer,
         Buffer.from(payloadBytes),
         undefined
@@ -162,8 +187,7 @@ export async function acceptChallenge(
     const ciphertextB64 = Buffer.from(ciphertext).toString('base64');
 
     // Generate nonce and timestamp for signing
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const requestNonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -172,21 +196,29 @@ export async function acceptChallenge(
 
     const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 
-    // Build signing string for accept
-    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|${identityHashB64}|${walletKeyB64}|${nonceB64}|${ciphertextB64}|`;
+    // Build salts string: sorted alphabetically by key for signing
+    const sortedSaltKeys = Object.keys(requestedSalts).sort();
+    const saltsString = sortedSaltKeys
+        .map(key => `${key}:${requestedSalts[key]}`)
+        .join(',');
+
+    // Build signing string for accept (NEW FORMAT with salts)
+    // Format: time|nonce|challenge_id|wallet_id|identity_hash|salts_string|wallet_key|nonce|encrypted|
+    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|${identityHashB64}|${saltsString}|${walletKeyB64}|${nonceB64}|${ciphertextB64}|`;
 
     // Sign the string
     const sigBytes = new TextEncoder().encode(signingString);
-    const signature = sign(wallet.algorithm, wallet.private_key, sigBytes as any);
+    const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
     const signatureB64 = signature.toString('base64');
 
-    // Submit acceptance
+    // Submit acceptance with salts included
     await acceptIdentityChallenge({
         time,
         nonce: requestNonce,
         challenge_id: challengeId,
         wallet_id: wallet.id,
         identity_hash: identityHashB64,
+        identity_attribute_hashing_salts: requestedSalts, // NEW: Send salts to server
         identity_encrypting_wallet_key: walletKeyB64,
         identity_encrypting_nonce: nonceB64,
         identity_encrypted: ciphertextB64,
@@ -203,37 +235,38 @@ export async function rejectChallenge(
     wallet: Wallet,
     claimResponse: ClaimChallengeResponse
 ): Promise<void> {
-    // Compute attribute hashes (same as accept flow, for zero-knowledge proof)
-    const attributeHashes: Record<string, Uint8Array> = {};
+    // Compute attribute hashes using wallet's salts and challenge's canonical order
+    const orderedHashes: Uint8Array[] = [];
 
-    const hashingScheme = claimResponse.claim.identity_attribute_hashing_scheme;
-    const salts = claimResponse.claim.identity_attribute_hashing_salts;
+    const hashingScheme = wallet.identity_attribute_hashing_scheme;
+    const requestedAttrs = claimResponse.challenge.identity_attributes;
 
-    for (const [attrName, saltB64] of Object.entries(salts)) {
-        const attrValue = wallet.attributes[attrName];
-        if (!attrValue) {
-            continue; // Skip attributes wallet doesn't have
+    // Use challenge.identity_attributes array order (already sorted by server)
+    for (const attrName of requestedAttrs) {
+        const attrData = wallet.attributes[attrName];
+        if (!attrData) {
+            // Wallet doesn't have this attribute - skip hash computation
+            // The identity hash will only include attributes the wallet has
+            continue;
         }
 
-        // Decode salt and compute hash
-        const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+        // Decode wallet's salt and compute hash
+        const saltBytes = Uint8Array.from(atob(attrData.salt), c => c.charCodeAt(0));
         const encoder = new TextEncoder();
-        const dataBytes = encoder.encode(attrValue);
+        const valueBytes = encoder.encode(attrData.value);
 
-        const attrHash = hash(hashingScheme, salt as any, dataBytes as any);
-        attributeHashes[attrName] = attrHash as any;
+        const attrHash = hash(hashingScheme, saltBytes as any, valueBytes as any);
+        orderedHashes.push(attrHash as any);
     }
 
-    // Compute identity hash (HMAC of concatenated attribute hashes using challenge_id as key)
-    const sortedAttrNames = Object.keys(attributeHashes).sort();
-    const combinedHashes = new Uint8Array(
-        sortedAttrNames.reduce((acc, name) => acc + attributeHashes[name].length, 0)
-    );
+    // Concatenate hashes in challenge's canonical order
+    const totalLength = orderedHashes.reduce((acc, h) => acc + h.length, 0);
+    const combinedHashes = new Uint8Array(totalLength);
 
     let offset = 0;
-    for (const name of sortedAttrNames) {
-        combinedHashes.set(attributeHashes[name], offset);
-        offset += attributeHashes[name].length;
+    for (const attrHash of orderedHashes) {
+        combinedHashes.set(attrHash, offset);
+        offset += attrHash.length;
     }
 
     const challengeIdBytes = new TextEncoder().encode(challengeId);
@@ -241,8 +274,7 @@ export async function rejectChallenge(
     const identityHashB64 = btoa(String.fromCharCode(...(identityHash as any)));
 
     // Generate nonce and timestamp for signing
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const requestNonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -256,7 +288,7 @@ export async function rejectChallenge(
 
     // Sign the string
     const sigBytes = new TextEncoder().encode(signingString);
-    const signature = sign(wallet.algorithm, wallet.private_key, sigBytes as any);
+    const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
     const signatureB64 = signature.toString('base64');
 
     // Submit rejection

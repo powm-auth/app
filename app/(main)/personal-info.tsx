@@ -4,7 +4,7 @@ import {
   Button,
   GlassCard,
   PowmText,
-  ScreenHeader,
+  ScreenHeader
 } from '@/components';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
@@ -64,8 +64,8 @@ export default function PersonalInfoScreen() {
             ))}
           </GlassCard>
 
-          <Button 
-            title="Scan new document" 
+          <Button
+            title="Scan new document"
             icon="qrcode"
             onPress={() => router.push('/scan-document')}
           />

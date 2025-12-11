@@ -1,73 +1,19 @@
-/**
- * HKDF (HMAC-based Key Derivation Function) implementation
- * RFC 5869: https://tools.ietf.org/html/rfc5869
- */
-
+import { hkdf as nobleHkdf } from '@noble/hashes/hkdf';
+import { sha256 } from '@noble/hashes/sha256';
+import { sha384, sha512 } from '@noble/hashes/sha512';
 import { Buffer } from 'buffer';
-import crypto from 'react-native-quick-crypto';
+
+const HASHES = {
+    sha256,
+    sha384,
+    sha512,
+};
 
 /**
- * HKDF-Extract step
- */
-function hkdfExtract(hash: string, salt: Buffer, ikm: Buffer): Buffer {
-    const hmac = crypto.createHmac(hash, salt.length > 0 ? salt : Buffer.alloc(hashLength(hash), 0));
-    hmac.update(ikm);
-    return Buffer.from(hmac.digest());
-}
-
-/**
- * HKDF-Expand step
- */
-function hkdfExpand(hash: string, prk: Buffer, info: Buffer, length: number): Buffer {
-    const hashLen = hashLength(hash);
-    const n = Math.ceil(length / hashLen);
-
-    if (n > 255) {
-        throw new Error('HKDF: length too long');
-    }
-
-    let t = Buffer.alloc(0);
-    const blocks: Buffer[] = [];
-
-    for (let i = 1; i <= n; i++) {
-        const hmac = crypto.createHmac(hash, prk);
-        hmac.update(t);
-        hmac.update(info);
-        hmac.update(Buffer.from([i]));
-        t = Buffer.from(hmac.digest());
-        blocks.push(t);
-    }
-
-    return Buffer.concat(blocks).slice(0, length);
-}
-
-/**
- * Get hash output length in bytes
- */
-function hashLength(hash: string): number {
-    switch (hash.toLowerCase()) {
-        case 'sha256':
-        case 'sha-256':
-            return 32;
-        case 'sha384':
-        case 'sha-384':
-            return 48;
-        case 'sha512':
-        case 'sha-512':
-            return 64;
-        default:
-            throw new Error(`Unsupported hash algorithm: ${hash}`);
-    }
-}
-
-/**
- * HKDF - HMAC-based Key Derivation Function
- * 
- * @param ikm - Input keying material
- * @param length - Length of output keying material in bytes
- * @param salt - Optional salt (default: hash length zeros)
- * @param info - Optional context/application specific info
- * @param hash - Hash algorithm (sha256, sha384, sha512)
+ * HKDF key derivation
+ * @param ikm - Input Keying Material
+ * @param length - Output length in bytes
+ * @param options - Options (salt, info, hash algorithm)
  */
 export function hkdf(
     ikm: Buffer,
@@ -78,13 +24,17 @@ export function hkdf(
         hash: string;
     }
 ): Buffer {
-    const salt = options.salt || Buffer.alloc(0);
-    const info = options.info || Buffer.alloc(0);
-    const hash = options.hash.toLowerCase().replace(/-/g, '');
+    const hashName = options.hash.toLowerCase().replace(/-/g, '') as keyof typeof HASHES;
+    const hashFn = HASHES[hashName];
 
-    // Extract
-    const prk = hkdfExtract(hash, salt, ikm);
+    if (!hashFn) {
+        throw new Error(`Unsupported hash algorithm: ${options.hash}`);
+    }
 
-    // Expand
-    return hkdfExpand(hash, prk, info, length);
+    const salt = options.salt ? new Uint8Array(options.salt) : undefined;
+    const info = options.info ? new Uint8Array(options.info) : undefined;
+    const ikmUint = new Uint8Array(ikm);
+
+    const result = nobleHkdf(hashFn, ikmUint, salt, info, length);
+    return Buffer.from(result);
 }

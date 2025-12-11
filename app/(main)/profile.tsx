@@ -7,7 +7,7 @@ import {
   PowmIconName,
   PowmText,
 } from '@/components';
-import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useRef } from 'react';
 import {
@@ -90,7 +90,7 @@ export default function ProfileScreen() {
       onPanResponderRelease: (_evt, gesture) => {
         const { dx } = gesture;
         if (dx < -50) {
-          router.push('/');
+          router.push('/home');
         }
       },
     })
@@ -130,8 +130,8 @@ export default function ProfileScreen() {
 
                   <GlassCard padding={0}>
                     {section.items.map((item, itemIndex) => (
-                      <AnimatedEntry 
-                        key={itemIndex} 
+                      <AnimatedEntry
+                        key={itemIndex}
                         index={baseIndex + itemIndex}
                         slideDistance={30}
                       >

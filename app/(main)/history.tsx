@@ -81,8 +81,8 @@ export default function HistoryScreen() {
   // Header Action Button (Edit / Done)
   const HeaderAction = activities.length > 0 ? (
     <Pressable onPress={toggleEditMode} style={styles.editButton} hitSlop={10}>
-      <PowmText 
-        variant="text" 
+      <PowmText
+        variant="text"
         color={isEditing ? powmColors.electricMain : powmColors.gray}
         style={{ fontWeight: '600', fontSize: 13 }}
       >
@@ -124,9 +124,9 @@ export default function HistoryScreen() {
           {/* Clear All Option */}
           {isEditing && activities.length > 0 && (
             <Pressable onPress={handleClearAll} style={styles.clearAllContainer}>
-               <PowmText variant="text" color={powmColors.deletionRedHard} style={{ fontWeight: 'bold' }}>
-                 Clear all history
-               </PowmText>
+              <PowmText variant="text" color={powmColors.deletionRedHard} style={{ fontWeight: 'bold' }}>
+                Clear all history
+              </PowmText>
             </Pressable>
           )}
 
@@ -138,11 +138,11 @@ export default function HistoryScreen() {
                   <PowmText variant="subtitleSemiBold" color={powmColors.gray} style={styles.groupTitle}>
                     {dateLabel}
                   </PowmText>
-                  
+
                   {/* Using GlassCard as the Group Container (Revolut Style) */}
                   <GlassCard padding={0}>
                     {items.map((item, index) => (
-                      <HistoryItem 
+                      <HistoryItem
                         key={item.id}
                         item={item}
                         isEditing={isEditing}

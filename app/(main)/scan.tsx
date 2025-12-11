@@ -1,8 +1,7 @@
 import { LoadingOverlay, PowmIcon, PowmText } from '@/components';
 import { CameraPermissionGuard } from '@/components/scanner/CameraPermissionGuard';
 import { ScannerOverlay } from '@/components/scanner/ScannerOverlay';
-import { TEST_WALLET } from '@/data/test-wallet';
-import { claimChallenge, parseChallengeId } from '@/services/wallet-service';
+import { claimChallenge, getCurrentWallet, parseChallengeId } from '@/services/wallet-service';
 import { powmColors } from '@/theme/powm-tokens';
 import { CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -59,8 +58,13 @@ export default function ScanScreen() {
       const challengeId = parseChallengeId(data);
       console.log('Challenge ID:', challengeId);
 
+      const wallet = getCurrentWallet();
+      if (!wallet) {
+        throw new Error('Wallet not loaded');
+      }
+
       // Claim the challenge with the wallet
-      const claimResponse = await claimChallenge(challengeId, TEST_WALLET);
+      const claimResponse = await claimChallenge(challengeId, wallet);
       console.log('Challenge claimed successfully:', claimResponse);
 
       setLoading(false);
@@ -140,9 +144,14 @@ export default function ScanScreen() {
                 if (!scanned) {
                   setScanned(true);
                   try {
+                    const wallet = getCurrentWallet();
+                    if (!wallet) {
+                      throw new Error('Wallet not loaded');
+                    }
+
                     // Test with a mock challenge ID
                     const testChallengeId = 'chl_test123456789';
-                    const claimResponse = await claimChallenge(testChallengeId, TEST_WALLET);
+                    const claimResponse = await claimChallenge(testChallengeId, wallet);
                     console.log('Test claim successful:', claimResponse);
                     router.push('/validate-identity');
                   } catch (error) {
