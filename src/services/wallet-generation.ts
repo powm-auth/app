@@ -1,14 +1,14 @@
 import { generateKeyPair as generateSigningKeyPair } from '@/crypto/signing';
 import { Wallet } from '@/types/powm';
 import { Buffer } from 'buffer';
-import crypto from 'react-native-quick-crypto';
+import * as Crypto from 'expo-crypto';
 
 /**
  * Generate a random wallet ID
  */
 function generateWalletId(): string {
-    const randomBytes = crypto.randomBytes(24);
-    const base32 = randomBytes.toString('base64')
+    const bytes = Crypto.getRandomBytes(24);
+    const base32 = Buffer.from(bytes).toString('base64')
         .replace(/\+/g, '')
         .replace(/\//g, '')
         .replace(/=/g, '')
@@ -21,7 +21,7 @@ function generateWalletId(): string {
  * Generate a random salt for attribute hashing
  */
 function generateSalt(): string {
-    return crypto.randomBytes(16).toString('base64');
+    return Buffer.from(Crypto.getRandomBytes(16)).toString('base64');
 }
 
 

@@ -1,4 +1,7 @@
-import crypto from 'react-native-quick-crypto';
+import { hmac } from '@noble/hashes/hmac';
+import { sha256 } from '@noble/hashes/sha256';
+import { sha512 } from '@noble/hashes/sha512';
+import { Buffer } from 'buffer';
 import { normalizeScheme } from './common';
 
 export type KeyedHashingScheme = 'hmacsha256' | 'hmacsha512';
@@ -8,15 +11,15 @@ const HASH_SIZE_MAP: Record<string, number> = {
     hmacsha512: 64,
 };
 
-const HASH_ALGO_MAP: Record<string, 'sha256' | 'sha512'> = {
-    hmacsha256: 'sha256',
-    hmacsha512: 'sha512',
+const HASH_ALGO_MAP = {
+    hmacsha256: sha256,
+    hmacsha512: sha512,
 };
 
-function getHashAlgo(scheme: string): 'sha256' | 'sha512' {
+function getHashAlgo(scheme: string) {
     const normalized = normalizeScheme(scheme);
     if (!(normalized in HASH_ALGO_MAP)) throw new Error(`Unsupported keyed hashing scheme: ${scheme}`);
-    return HASH_ALGO_MAP[normalized];
+    return HASH_ALGO_MAP[normalized as keyof typeof HASH_ALGO_MAP];
 }
 
 export function isSchemeSupported(scheme: string): boolean {
@@ -37,7 +40,7 @@ export function validate(scheme: string, hash: Buffer): boolean {
  * @returns HMAC digest
  */
 export function hash(scheme: string, key: Buffer, input: Buffer): Buffer {
-    const hmac = crypto.createHmac(getHashAlgo(scheme), key);
-    hmac.update(input);
-    return Buffer.from(hmac.digest());
+    const hashFn = getHashAlgo(scheme);
+    const result = hmac(hashFn, key, input);
+    return Buffer.from(result);
 }

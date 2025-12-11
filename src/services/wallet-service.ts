@@ -10,7 +10,7 @@ import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChalleng
 import { loadWallet } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
 import { Buffer } from 'buffer';
-import crypto from 'react-native-quick-crypto';
+import * as Crypto from 'expo-crypto';
 
 // Current wallet instance cache
 let currentWallet: Wallet | null = null;
@@ -67,8 +67,7 @@ export async function claimChallenge(
     wallet: Wallet
 ): Promise<ClaimChallengeResponse> {
     // Generate nonce (32 chars, URL-safe base64)
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const nonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -188,8 +187,7 @@ export async function acceptChallenge(
     const ciphertextB64 = Buffer.from(ciphertext).toString('base64');
 
     // Generate nonce and timestamp for signing
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const requestNonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -276,8 +274,7 @@ export async function rejectChallenge(
     const identityHashB64 = btoa(String.fromCharCode(...(identityHash as any)));
 
     // Generate nonce and timestamp for signing
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
+    const randomBytes = Crypto.getRandomBytes(32);
     const requestNonce = btoa(String.fromCharCode(...randomBytes))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')

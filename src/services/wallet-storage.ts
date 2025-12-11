@@ -6,10 +6,11 @@
  */
 
 import type { Wallet } from '@/types/powm';
+import { gcm } from '@noble/ciphers/aes';
 import { Buffer } from 'buffer';
+import * as Crypto from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
-import crypto from 'react-native-quick-crypto';
 
 // Storage-specific types (serialized formats)
 interface WalletSecureData {
@@ -57,8 +58,7 @@ async function getFileEncryptionKey(): Promise<string> {
     let key = await SecureStore.getItemAsync(ENCRYPTION_KEY_STORAGE_KEY);
     if (!key) {
         // Generate 32-byte key (256 bits)
-        const keyBytes = new Uint8Array(32);
-        crypto.getRandomValues(keyBytes);
+        const keyBytes = Crypto.getRandomBytes(32);
         key = Buffer.from(keyBytes).toString('base64');
         await SecureStore.setItemAsync(ENCRYPTION_KEY_STORAGE_KEY, key);
     }
@@ -221,20 +221,15 @@ export async function isSecureStorageAvailable(): Promise<boolean> {
  */
 async function encryptWalletFile(data: string, keyBase64: string): Promise<string> {
     const key = Buffer.from(keyBase64, 'base64');
-    const nonce = crypto.randomBytes(12);
+    const nonce = Crypto.getRandomBytes(12);
 
-    const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
+    const cipher = gcm(key, nonce);
     const plaintext = Buffer.from(data, 'utf8');
 
-    const encrypted = Buffer.concat([
-        cipher.update(plaintext),
-        cipher.final()
-    ]);
-
-    const tag = cipher.getAuthTag();
+    const result = cipher.encrypt(plaintext);
 
     // Return nonce + ciphertext + tag as base64
-    const combined = Buffer.concat([nonce, encrypted, tag]);
+    const combined = Buffer.concat([Buffer.from(nonce), Buffer.from(result)]);
     return combined.toString('base64');
 }
 
@@ -245,18 +240,13 @@ async function decryptWalletFile(encryptedBase64: string, keyBase64: string): Pr
     const key = Buffer.from(keyBase64, 'base64');
     const combined = Buffer.from(encryptedBase64, 'base64');
 
-    // Extract nonce (first 12 bytes), tag (last 16 bytes), and ciphertext
+    // Extract nonce (first 12 bytes)
     const nonce = combined.subarray(0, 12);
-    const tag = combined.subarray(combined.length - 16);
-    const ciphertext = combined.subarray(12, combined.length - 16);
+    // The rest is ciphertext || tag, which @noble/ciphers expects
+    const ciphertextWithTag = combined.subarray(12);
 
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
-    decipher.setAuthTag(tag as any);
+    const cipher = gcm(key, nonce);
+    const decrypted = cipher.decrypt(ciphertextWithTag);
 
-    const decrypted = Buffer.concat([
-        decipher.update(ciphertext),
-        decipher.final()
-    ]);
-
-    return decrypted.toString('utf8');
+    return Buffer.from(decrypted).toString('utf8');
 }
