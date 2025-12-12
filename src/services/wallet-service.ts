@@ -92,7 +92,7 @@ export async function claimChallenge(
         wallet.private_key,
         dataBytes as any
     );
-    const walletSignature = signature.toString('base64');
+    const walletSignature = Buffer.from(signature).toString('base64');
 
     // Submit claim to Powm server
     const claimResponse = await claimIdentityChallenge({
@@ -216,7 +216,7 @@ export async function acceptChallenge(
     // Sign the string
     const sigBytes = new TextEncoder().encode(signingString);
     const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
-    const signatureB64 = signature.toString('base64');
+    const signatureB64 = Buffer.from(signature).toString('base64');
 
     // Submit acceptance with salts included
     await acceptIdentityChallenge({
@@ -258,7 +258,7 @@ export async function rejectChallenge(
     // Sign the string
     const sigBytes = new TextEncoder().encode(signingString);
     const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
-    const signatureB64 = signature.toString('base64');
+    const signatureB64 = Buffer.from(signature).toString('base64');
 
     // Submit rejection
     await rejectIdentityChallenge({
@@ -279,7 +279,7 @@ export async function createWalletChallenge(
 ): Promise<{ challengeId: string; privateKey: Buffer; challenge: any }> {
     const encryptingScheme = 'ecdhp256_hkdfsha256_aes256gcm';
     const ephemeralKeys = generateKeyPair(encryptingScheme);
-    const publicKeyB64 = ephemeralKeys.publicKeySpkiDer.toString('base64');
+    const publicKeyB64 = Buffer.from(ephemeralKeys.publicKeySpkiDer).toString('base64');
     const signingPrivateKeyB64 = Buffer.from(wallet.private_key).toString('base64');
 
     const challenge = await createIdentityChallenge(
@@ -293,7 +293,7 @@ export async function createWalletChallenge(
 
     return {
         challengeId: challenge.challenge_id,
-        privateKey: ephemeralKeys.privateKeyPkcs8Der,
+        privateKey: Buffer.from(ephemeralKeys.privateKeyPkcs8Der),
         challenge: challenge
     };
 }
@@ -308,10 +308,9 @@ export async function pollChallenge(
     onStatus?: (status: string) => void
 ): Promise<any> {
     try {
-        // Wait for challenge to be completed (use 10 minute timeout to allow plenty of time)
+        // Wait for challenge to be complete
         const completedChallenge = await waitForCompletedIdentityChallenge(
-            challengeId,
-            600000 // 10 minutes
+            challengeId
         );
 
         // Decrypt the challenge response
