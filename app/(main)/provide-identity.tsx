@@ -144,7 +144,7 @@ export default function ValidateIdentityScreen() {
                   setLoadingMessage('Rejecting challenge...');
                   await rejectChallenge(challengeId, wallet, claimResponse);
                   setLoadingMessage(null);
-                  router.replace('/home');
+                  router.dismissAll();
                 } catch (error) {
                   console.error('Reject error:', error);
                   setLoadingMessage(null);
@@ -175,7 +175,7 @@ export default function ValidateIdentityScreen() {
                   setLoadingMessage('Accepting challenge...');
                   await acceptChallenge(challengeId, wallet, claimResponse);
                   setLoadingMessage(null);
-                  router.replace('/home');
+                  router.dismissAll();
                 } catch (error) {
                   console.error('Accept failed:', error);
                   setLoadingMessage(null);

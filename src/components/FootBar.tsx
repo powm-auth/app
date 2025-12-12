@@ -33,7 +33,7 @@ export const FootBar: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   // Hide footer on full-screen flows
-  const isHidden = pathname.includes('/scan') || pathname.includes('/validate-identity');
+  const isHidden = pathname.includes('/scan') || pathname.includes('/provide-identity');
 
   const isActive = (route: string) => {
     if (route === '/home') {

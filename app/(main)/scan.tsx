@@ -1,21 +1,19 @@
-import { LoadingOverlay, PowmIcon, PowmText } from '@/components';
+import { CloseButton, LoadingOverlay, PowmText } from '@/components';
 import { CameraPermissionGuard } from '@/components/scanner/CameraPermissionGuard';
 import { ScannerOverlay } from '@/components/scanner/ScannerOverlay';
 import { claimChallenge, getCurrentWallet, parseChallengeId } from '@/services/wallet-service';
-import { powmColors } from '@/theme/powm-tokens';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Easing, Pressable, StatusBar, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Alert, Animated, Dimensions, Easing, StatusBar, StyleSheet, View } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const SCAN_SIZE = width * 0.7;
 
 export default function ScanScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const scanAnim = useRef(new Animated.Value(0)).current;
 
   // PREVENT MULTIPLE SCANS
@@ -71,7 +69,7 @@ export default function ScanScreen() {
 
       // Navigate to validation screen with challenge data
       router.push({
-        pathname: '/validate-identity',
+        pathname: '/provide-identity',
         params: {
           challengeId,
           claimData: JSON.stringify(claimResponse),
@@ -120,15 +118,16 @@ export default function ScanScreen() {
             </Animated.View>
           </ScannerOverlay>
 
-          {/* Controls Overlay (Header) */}
-          <View style={[styles.header, { top: insets.top + 10 }]}>
-            <Pressable onPress={() => router.back()} style={styles.iconButton}>
-              <PowmIcon name="cross" size={20} color={powmColors.white} />
-            </Pressable>
+          {/* Close Button */}
+          <View style={[styles.closeButton, { top: powmSpacing.xxl }]}>
+            <CloseButton onPress={() => router.back()} />
+          </View>
+
+          {/* Title Badge */}
+          <View style={[styles.titleBadge, { top: powmSpacing.xxl + powmSpacing.xxl * 2 }]}>
             <View style={styles.badge}>
-              <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>Scan Code</PowmText>
+              <PowmText variant="subtitleSemiBold" style={{ fontSize: 14 }}>Scan QR</PowmText>
             </View>
-            <View style={{ width: 40 }} />
           </View>
 
           {/* Bottom Hint */}
@@ -136,37 +135,6 @@ export default function ScanScreen() {
             <PowmText variant="text" color="rgba(255,255,255,0.7)">
               Align the QR code within the frame
             </PowmText>
-
-            {/* Test Button (Respects scanned state) */}
-            <Pressable
-              style={styles.testButton}
-              onPress={async () => {
-                if (!scanned) {
-                  setScanned(true);
-                  try {
-                    const wallet = getCurrentWallet();
-                    if (!wallet) {
-                      throw new Error('Wallet not loaded');
-                    }
-
-                    // Test with a mock challenge ID
-                    const testChallengeId = 'chl_test123456789';
-                    const claimResponse = await claimChallenge(testChallengeId, wallet);
-                    console.log('Test claim successful:', claimResponse);
-                    router.push('/validate-identity');
-                  } catch (error) {
-                    console.error('Test claim failed:', error);
-                    Alert.alert(
-                      'Test Failed',
-                      error instanceof Error ? error.message : 'Failed to claim test challenge',
-                      [{ text: 'OK', onPress: () => setScanned(false) }]
-                    );
-                  }
-                }
-              }}
-            >
-              <PowmText variant="text" color={powmColors.white}>[TEST] Validate</PowmText>
-            </Pressable>
           </View>
 
         </CameraView>
@@ -186,9 +154,8 @@ const styles = StyleSheet.create({
   bottomRight: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0 },
   laserContainer: { width: '100%', position: 'absolute', top: 0, alignItems: 'center' },
   laserLine: { height: 2, width: '90%', borderRadius: 1 },
-  header: { position: 'absolute', left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
-  iconButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  closeButton: { position: 'absolute', left: 24, zIndex: 10 },
+  titleBadge: { position: 'absolute', left: 0, right: 0, alignItems: 'center', zIndex: 10 },
   badge: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  bottomHint: { position: 'absolute', bottom: 100, width: '100%', alignItems: 'center' },
-  testButton: { marginTop: 20, padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8 }
+  bottomHint: { position: 'absolute', bottom: 100, width: '100%', alignItems: 'center' }
 });

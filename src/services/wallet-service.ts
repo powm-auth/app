@@ -276,7 +276,7 @@ export async function rejectChallenge(
 export async function createWalletChallenge(
     wallet: Wallet,
     attributes: string[]
-): Promise<{ challengeId: string; privateKey: Buffer }> {
+): Promise<{ challengeId: string; privateKey: Buffer; challenge: any }> {
     const encryptingScheme = 'ecdhp256_hkdfsha256_aes256gcm';
     const ephemeralKeys = generateKeyPair(encryptingScheme);
     const publicKeyB64 = ephemeralKeys.publicKeySpkiDer.toString('base64');
@@ -293,12 +293,14 @@ export async function createWalletChallenge(
 
     return {
         challengeId: challenge.challenge_id,
-        privateKey: ephemeralKeys.privateKeyPkcs8Der
+        privateKey: ephemeralKeys.privateKeyPkcs8Der,
+        challenge: challenge
     };
 }
 
 /**
  * Poll for challenge completion and decrypt identity
+ * Polls with a long timeout to allow for challenge completion
  */
 export async function pollChallenge(
     challengeId: string,
@@ -306,10 +308,10 @@ export async function pollChallenge(
     onStatus?: (status: string) => void
 ): Promise<any> {
     try {
-        // Wait for challenge to be completed (SDK handles polling)
+        // Wait for challenge to be completed (use 10 minute timeout to allow plenty of time)
         const completedChallenge = await waitForCompletedIdentityChallenge(
             challengeId,
-            300000 // 5 minute timeout
+            600000 // 10 minutes
         );
 
         // Decrypt the challenge response

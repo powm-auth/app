@@ -2,6 +2,7 @@ export * from './AnimatedEntry';
 export * from './BackgroundImage';
 export * from './Button';
 export * from './Card';
+export * from './CloseButton';
 export * from './Column';
 export * from './Divider';
 export * from './GlassCard';

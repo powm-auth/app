@@ -1,9 +1,22 @@
 import { FootBar } from '@/components';
 import { getCurrentWallet } from '@/services/wallet-service';
 import { powmColors } from '@/theme/powm-tokens';
+import { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+// Shared screen options for DRY configuration
+const featureScreenOptions: NativeStackNavigationOptions = {
+  animation: 'slide_from_right',
+  gestureEnabled: true,
+};
+
+const modalScreenOptions: NativeStackNavigationOptions = {
+  animation: 'slide_from_bottom',
+  presentation: 'modal',
+  gestureEnabled: true,
+};
 
 export default function AppLayout() {
   const router = useRouter();
@@ -35,40 +48,15 @@ export default function AppLayout() {
           <Stack.Screen name="profile" />
 
           {/* Feature Screens */}
-          <Stack.Screen
-            name="personal-info"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="identity-documents"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="my-data"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="account"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="notifications"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
-          <Stack.Screen
-            name="help"
-            options={{ animation: 'slide_from_right', gestureEnabled: true }}
-          />
+          <Stack.Screen name="personal-info" options={featureScreenOptions} />
+          <Stack.Screen name="identity-documents" options={featureScreenOptions} />
+          <Stack.Screen name="my-data" options={featureScreenOptions} />
+          <Stack.Screen name="account" options={featureScreenOptions} />
+          <Stack.Screen name="notifications" options={featureScreenOptions} />
+          <Stack.Screen name="help" options={featureScreenOptions} />
 
           {/* Scanners */}
-          <Stack.Screen
-            name="scan"
-            options={{
-              presentation: 'fullScreenModal',
-              gestureEnabled: false,
-              animation: 'fade',
-            }}
-          />
+          <Stack.Screen name="scan" options={modalScreenOptions} />
           <Stack.Screen
             name="scan-document"
             options={{
@@ -79,22 +67,8 @@ export default function AppLayout() {
           />
 
           {/* Modals */}
-          <Stack.Screen
-            name="create-ticket"
-            options={{
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen
-            name="validate-identity"
-            options={{
-              animation: 'slide_from_bottom',
-              presentation: 'modal',
-              gestureEnabled: true,
-            }}
-          />
+          <Stack.Screen name="provide-identity" options={modalScreenOptions} />
+          <Stack.Screen name="request-identity" options={modalScreenOptions} />
         </Stack>
       </View>
 

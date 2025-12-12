@@ -1,21 +1,17 @@
 import {
     AnimatedEntry,
     BackgroundImage,
-    Button,
-    Column,
-    GlassCard,
     PowmIcon,
     PowmText,
     Row
 } from '@/components';
 import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import { ScannerCard } from '@/components/home/ScannerCard';
-import { createWalletChallenge, getCurrentWallet, pollChallenge } from '@/services/wallet-service';
+import { getCurrentWallet } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -38,49 +34,8 @@ export default function HomeScreen() {
         },
     ]);
 
-    const [challengeId, setChallengeId] = useState<string | null>(null);
-    const [status, setStatus] = useState<string>('idle'); // idle, creating, polling, accepted, rejected
-    const [identityData, setIdentityData] = useState<any>(null);
-
     const handleMarkAllRead = () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    };
-
-    const handleCreateChallenge = async () => {
-        const wallet = getCurrentWallet();
-        if (!wallet) return;
-
-        setStatus('creating');
-        try {
-            // Request basic attributes
-            const attributes = ['first_name', 'last_name'];
-            const { challengeId, privateKey } = await createWalletChallenge(wallet, attributes);
-
-            setChallengeId(challengeId);
-            setStatus('polling');
-
-            // Start polling
-            try {
-                const identity = await pollChallenge(challengeId, privateKey, (s) => {
-                    if (s === 'accepted') setStatus('accepted');
-                    else if (s === 'rejected') setStatus('rejected');
-                });
-                setIdentityData(identity);
-                setStatus('accepted');
-            } catch (e) {
-                console.error(e);
-                setStatus('rejected');
-            }
-        } catch (e) {
-            console.error(e);
-            setStatus('idle');
-        }
-    };
-
-    const handleReset = () => {
-        setChallengeId(null);
-        setStatus('idle');
-        setIdentityData(null);
     };
 
     return (
@@ -110,7 +65,7 @@ export default function HomeScreen() {
 
                     {/* 1. Scanner Card */}
                     <AnimatedEntry index={0}>
-                        <View style={{ marginBottom: powmSpacing.xl }}>
+                        <View style={{ marginBottom: powmSpacing.xxl * 1.5 }}>
                             <ScannerCard onPress={() => {
                                 router.push('/scan');
                             }} />
@@ -119,67 +74,30 @@ export default function HomeScreen() {
 
                     {/* Wallet-to-Wallet Identity Exchange */}
                     <AnimatedEntry index={1}>
-                        <Column gap={powmSpacing.md} style={{ alignItems: 'center' }}>
-                            {!challengeId ? (
-                                <Button
-                                    title={status === 'creating' ? "Creating..." : "Request Identity"}
-                                    onPress={handleCreateChallenge}
-                                    disabled={status === 'creating'}
-                                    style={{ width: '100%' }}
-                                />
-                            ) : (
-                                <GlassCard padding={powmSpacing.lg} style={{ alignItems: 'center', width: '100%' }}>
-                                    <PowmText variant="subtitle" align="center" style={{ marginBottom: powmSpacing.md }}>
-                                        Scan to Prove Identity
-                                    </PowmText>
-
-                                    <View style={{ padding: powmSpacing.md, backgroundColor: 'white', borderRadius: powmRadii.md }}>
-                                        <QRCode
-                                            value={`powm://${challengeId}`}
-                                            size={200}
-                                        />
+                        <Pressable
+                            onPress={() => router.push('/request-identity')}
+                            style={({ pressed }) => [
+                                styles.requestIdentityCard,
+                                pressed && { opacity: 0.8 },
+                            ]}
+                        >
+                            <View style={styles.requestIdentityBorder}>
+                                <View style={styles.requestIdentityContent}>
+                                    <View style={styles.requestIdentityIcon}>
+                                        <PowmIcon name="id" size={32} color={powmColors.electricMain} />
                                     </View>
-
-                                    <View style={{ marginTop: powmSpacing.md, width: '100%', alignItems: 'center' }}>
-                                        {status === 'polling' && (
-                                            <Row gap={8} align="center">
-                                                <ActivityIndicator color={powmColors.electricMain} />
-                                                <PowmText variant="text">Waiting for scan...</PowmText>
-                                            </Row>
-                                        )}
-                                        {status === 'accepted' && (
-                                            <Column align="center" gap={4} style={{ width: '100%' }}>
-                                                <PowmIcon name="check" color={powmColors.success} size={32} />
-                                                <PowmText variant="subtitle" color={powmColors.success}>Identity Verified!</PowmText>
-                                                {identityData && (
-                                                    <PowmText variant="text" align="center">
-                                                        {identityData.first_name} {identityData.last_name}
-                                                    </PowmText>
-                                                )}
-                                                <Button
-                                                    title="Reset"
-                                                    variant="secondary"
-                                                    onPress={handleReset}
-                                                    style={{ marginTop: powmSpacing.md, width: '100%' }}
-                                                />
-                                            </Column>
-                                        )}
-                                        {status === 'rejected' && (
-                                            <Column align="center" gap={4} style={{ width: '100%' }}>
-                                                <PowmIcon name="close" color={powmColors.error} size={32} />
-                                                <PowmText variant="subtitle" color={powmColors.error}>Rejected or Failed</PowmText>
-                                                <Button
-                                                    title="Try Again"
-                                                    variant="secondary"
-                                                    onPress={handleReset}
-                                                    style={{ marginTop: powmSpacing.md, width: '100%' }}
-                                                />
-                                            </Column>
-                                        )}
+                                    <View style={{ flex: 1 }}>
+                                        <PowmText variant="subtitleSemiBold" style={{ fontSize: 18, marginBottom: 4 }}>
+                                            Request Identity
+                                        </PowmText>
+                                        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 14 }}>
+                                            Verify someone's identity with a QR code
+                                        </PowmText>
                                     </View>
-                                </GlassCard>
-                            )}
-                        </Column>
+                                    <PowmIcon name="chevron" size={20} color={powmColors.electricMain} />
+                                </View>
+                            </View>
+                        </Pressable>
                     </AnimatedEntry>
 
                     <View style={{ height: 100 }} />
@@ -237,15 +155,30 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(42, 40, 52, 0.8)',
     },
-    ticketsSection: {
-        marginBottom: powmSpacing.xxl,
+    requestIdentityCard: {
+        width: '100%',
+        borderRadius: powmRadii.xl,
     },
-    createIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: powmRadii.full,
-        backgroundColor: 'rgba(255, 154, 46, 0.15)',
+    requestIdentityBorder: {
+        borderRadius: powmRadii.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(151, 71, 255, 0.3)',
+        backgroundColor: 'rgba(42, 40, 52, 0.6)',
+        overflow: 'hidden',
+    },
+    requestIdentityContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: powmSpacing.md,
+        padding: powmSpacing.lg,
+    },
+    requestIdentityIcon: {
+        width: 56,
+        height: 56,
+        borderRadius: powmRadii.lg,
+        backgroundColor: 'rgba(151, 71, 255, 0.15)',
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
     },
 });

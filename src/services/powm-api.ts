@@ -23,28 +23,6 @@ function fetchWithTimeout(url: string, options: RequestInit, timeout: number = R
     ]);
 }
 
-/**
- * Parse JSON response with UTF-8 BOM handling
- */
-async function parseJsonResponse(response: Response): Promise<any> {
-    let text = await response.text();
-
-    // Remove UTF-8 BOM if present
-    if (text.charCodeAt(0) === 0xFEFF) {
-        text = text.slice(1);
-    }
-
-    try {
-        return JSON.parse(text);
-    } catch (e) {
-        throw new PowmApiError(
-            `Invalid JSON response from server: ${text.substring(0, 200)}`,
-            response.status,
-            text
-        );
-    }
-}
-
 export class PowmApiError extends Error {
     constructor(
         message: string,
@@ -112,7 +90,7 @@ export async function claimIdentityChallenge(
         );
     }
 
-    return parseJsonResponse(response);
+    return response.json();
 }
 
 /**
@@ -142,7 +120,7 @@ export async function acceptIdentityChallenge(
         );
     }
 
-    return parseJsonResponse(response);
+    return response.json();
 }
 
 /**
@@ -169,7 +147,7 @@ export async function rejectIdentityChallenge(
         );
     }
 
-    return parseJsonResponse(response);
+    return response.json();
 }
 
 /**
@@ -218,5 +196,5 @@ export async function testOnboardWallet(request: {
         );
     }
 
-    return parseJsonResponse(response);
+    return response.json();
 }
