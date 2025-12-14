@@ -10,7 +10,7 @@ import {
   Row,
   ScreenHeader,
 } from '@/components';
-import { deleteWallet } from '@/services/wallet-storage';
+import { deleteWallet, rotateAnonymizingKey } from '@/services/wallet-storage';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -84,6 +84,58 @@ export default function MyDataScreen() {
     );
   };
 
+  const handleRotateAnonymizingKey = () => {
+    Alert.alert(
+      "Reset Your Anonymous ID?",
+      "When apps verify your identity, they can also request your Anonymous ID — a unique code just for that app. It lets them recognize you on repeat visits without always needing your real details.\n\nIf you reset it, you'll get a new Anonymous ID. Apps will see you as a completely new person (for anonymous tracking only).",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Learn More",
+          onPress: () => {
+            Alert.alert(
+              "What is an Anonymous ID?",
+              "When an app verifies your identity, it might also request your Anonymous ID alongside your real details (like name or date of birth).\n\n" +
+              "Your Anonymous ID:\n" +
+              "• Is a unique code generated just for that app\n" +
+              "• Lets apps recognize you on future visits\n" +
+              "• Is different for every app — they can't track you across apps\n\n" +
+              "If you reset your Anonymous ID:\n\n" +
+              "• Apps will see you as a new anonymous user\n" +
+              "• Your past anonymous activity can't be linked to you\n" +
+              "• Your real identity & documents stay unchanged\n" +
+              "• This cannot be undone\n\n" +
+              "Use this if you want a fresh anonymous identity or suspect it may have been compromised.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Reset Anonymous ID", style: "destructive", onPress: confirmRotateAnonymizingKey }
+              ]
+            );
+          }
+        },
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: confirmRotateAnonymizingKey
+        }
+      ]
+    );
+  };
+
+  const confirmRotateAnonymizingKey = async () => {
+    try {
+      const success = await rotateAnonymizingKey();
+      if (success) {
+        Alert.alert("Done!", "Your Anonymous ID has been reset. Apps will now see you as a new user.");
+      } else {
+        Alert.alert("Error", "Failed to reset Anonymous ID. Please try again.");
+      }
+    } catch (error) {
+      console.error('Failed to rotate anonymizing key:', error);
+      Alert.alert('Error', 'Failed to reset Anonymous ID');
+    }
+  };
+
   return (
     <BackgroundImage>
       <View style={styles.container}>
@@ -136,6 +188,27 @@ export default function MyDataScreen() {
           <Column gap={powmSpacing.md}>
             <PowmText variant="subtitle" style={[styles.sectionTitle, { color: powmColors.deletionRedHard }]}>Danger Zone</PowmText>
 
+            {/* Rotate Anonymizing Key */}
+            <Pressable style={styles.warningCard} onPress={handleRotateAnonymizingKey}>
+              <LinearGradient
+                colors={['rgba(255, 159, 10, 0.1)', 'rgba(255, 159, 10, 0.05)']}
+                style={StyleSheet.absoluteFill}
+              />
+              <Row align="center" gap={16}>
+                <View style={[styles.iconCircle, { backgroundColor: 'rgba(255, 159, 10, 0.2)' }]}>
+                  <PowmIcon name="reload" size={22} color={powmColors.orangeElectricMain} />
+                </View>
+                <Column flex={1}>
+                  <PowmText variant="subtitleSemiBold" color={powmColors.orangeElectricMain}>Reset Anonymous ID</PowmText>
+                  <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
+                    Start fresh with a new anonymous identity
+                  </PowmText>
+                </Column>
+                <PowmIcon name="chevronRight" size={16} color={powmColors.inactive} />
+              </Row>
+            </Pressable>
+
+            {/* Delete Everything */}
             <Pressable style={styles.dangerCard} onPress={handleDeleteAll}>
               <LinearGradient
                 colors={['rgba(255, 69, 58, 0.1)', 'rgba(255, 69, 58, 0.05)']}
@@ -188,6 +261,13 @@ const styles = StyleSheet.create({
   },
 
   // Danger Zone
+  warningCard: {
+    borderRadius: powmRadii.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 159, 10, 0.3)',
+    overflow: 'hidden',
+    padding: 16,
+  },
   dangerCard: {
     borderRadius: powmRadii.xl,
     borderWidth: 1,

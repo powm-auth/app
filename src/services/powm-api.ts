@@ -169,6 +169,8 @@ export async function testOnboardWallet(request: {
     wallet_id: string;
     identity_attributes: Record<string, { value: string; salt: string }>;
     identity_attribute_hashing_scheme: string;
+    anonymizing_key: string;
+    anonymizing_hashing_scheme: string;
 }> {
     const requestBody = {
         ...request,
@@ -191,6 +193,44 @@ export async function testOnboardWallet(request: {
         console.error(`[PowmAPI] Failed to onboard wallet - HTTP ${response.status}: ${errorBody}`);
         throw new PowmApiError(
             `Failed to onboard wallet (HTTP ${response.status})`,
+            response.status,
+            errorBody
+        );
+    }
+
+    return response.json();
+}
+
+/**
+ * Reset the anonymizing key for a wallet
+ * This generates a new anonymizing key on the server and returns it
+ */
+export async function resetAnonymizingKey(request: {
+    time: string;
+    nonce: string;
+    wallet_id: string;
+    wallet_signature: string;
+}): Promise<{
+    wallet_id: string;
+    anonymizing_key: string;
+    anonymizing_hashing_scheme: string;
+}> {
+    const response = await fetchWithTimeout(
+        `${POWM_API_BASE}/wallets/reset-anonymizing-key`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(request),
+        }
+    );
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`[PowmAPI] Failed to reset anonymizing key - HTTP ${response.status}: ${errorBody}`);
+        throw new PowmApiError(
+            `Failed to reset anonymizing key (HTTP ${response.status})`,
             response.status,
             errorBody
         );

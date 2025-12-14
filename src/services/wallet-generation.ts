@@ -44,12 +44,12 @@ function mapAlgorithmToScheme(algorithm: string): string {
  * Create a new wallet with identity attributes
  * @param attributes - Map of attribute names to values
  * @param signingAlgorithm - The signing algorithm to use (default: EcdsaP256_Sha256)
- * @returns A new Wallet instance with native types (Buffer, Date)
+ * @returns A new Wallet instance with native types (Buffer, Date) and the signing key
  */
 export function createWallet(
     attributes: Record<string, string>,
     signingAlgorithm: string = 'EcdsaP256_Sha256'
-): { wallet: Wallet; publicKeySpkiDer: Buffer } {
+): { wallet: Wallet; signingPrivateKey: Buffer; publicKeySpkiDer: Buffer } {
     const walletId = generateWalletId();
     const scheme = mapAlgorithmToScheme(signingAlgorithm);
     const { privateKeyPkcs8Der, publicKeySpkiDer } = generateSigningKeyPair(scheme);
@@ -70,14 +70,14 @@ export function createWallet(
         id: walletId,
         created_at: now,
         updated_at: null,
-        private_key: privateKeyPkcs8Der,
         public_key: publicKeySpkiDer,
         signing_algorithm: signingAlgorithm,
         identity_attribute_hashing_scheme: 'hmacsha512', // Placeholder, will be replaced by server value
+        anonymizing_hashing_scheme: 'hmacsha512', // Placeholder, will be replaced by server value
         attributes: walletAttributes,
     };
 
-    return { wallet, publicKeySpkiDer };
+    return { wallet, signingPrivateKey: privateKeyPkcs8Der, publicKeySpkiDer };
 }
 
 /**
@@ -85,29 +85,33 @@ export function createWallet(
  * @param walletId - Server-assigned wallet ID
  * @param attributes - Identity attributes with values and salts from server
  * @param hashingScheme - Identity attribute hashing scheme from server
+ * @param anonymizingHashingScheme - Anonymizing hashing scheme from server
  * @param signingAlgorithm - The signing algorithm to use
- * @param privateKey - Private key buffer
+ * @param signingPrivateKey - Signing private key buffer
  * @param publicKey - Public key buffer
- * @returns A new Wallet instance with native types (Buffer, Date)
+ * @returns A new Wallet instance with native types (Buffer, Date) and the signing key separately
  */
 export function createWalletFromOnboarding(
     walletId: string,
     attributes: Record<string, { value: string; salt: string }>,
     hashingScheme: string,
+    anonymizingHashingScheme: string,
     signingAlgorithm: string,
-    privateKey: Buffer,
+    signingPrivateKey: Buffer,
     publicKey: Buffer
-): Wallet {
+): { wallet: Wallet; signingPrivateKey: Buffer } {
     const now = new Date();
 
-    return {
+    const wallet: Wallet = {
         id: walletId,
         created_at: now,
         updated_at: null,
-        private_key: privateKey,
         public_key: publicKey,
         signing_algorithm: signingAlgorithm,
         identity_attribute_hashing_scheme: hashingScheme,
+        anonymizing_hashing_scheme: anonymizingHashingScheme,
         attributes,
     };
+
+    return { wallet, signingPrivateKey };
 }

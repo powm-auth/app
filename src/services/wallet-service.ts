@@ -4,7 +4,7 @@
  */
 
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
-import { loadWallet } from '@/services/wallet-storage';
+import { loadWallet, withAnonymizingKey, withSigningKey } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
 import { createIdentityChallenge, decryptAndVerifyIdentity, decryptIdentityChallengeResponse, verifyIdentityChallengeSignature, waitForCompletedIdentityChallenge } from '@powm/sdk-js';
 import { encrypting, keyedHashing, signing } from '@powm/sdk-js/crypto';
@@ -83,16 +83,16 @@ export async function claimChallenge(
     // Build signing string: {time}|{nonce}|{challenge_id}|{wallet_id}|
     const signingString = `${time}|${nonce}|${challengeId}|${wallet.id}|`;
 
-    // Sign the string using wallet's private key
-    // Convert string to Buffer for signing
-    const dataBytes = Buffer.from(signingString, 'utf-8');
-
-    const signature = sign(
-        wallet.signing_algorithm,
-        wallet.private_key,
-        dataBytes as any
-    );
-    const walletSignature = Buffer.from(signature).toString('base64');
+    // Sign the string using wallet's signing key (retrieved only for signing)
+    const walletSignature = await withSigningKey((privateKey) => {
+        const dataBytes = Buffer.from(signingString, 'utf-8');
+        const signature = sign(
+            wallet.signing_algorithm,
+            privateKey,
+            dataBytes as any
+        );
+        return Buffer.from(signature).toString('base64');
+    });
 
     // Submit claim to Powm server
     const claimResponse = await claimIdentityChallenge({
@@ -112,6 +112,38 @@ export async function claimChallenge(
 }
 
 /**
+ * Handle anonymous_id attribute that is computed on-the-fly rather than stored in wallet
+ * Returns the computed value and salt, or null if not the anonymous_id attribute
+ */
+async function handleAnonymousIdAttribute(
+    attrName: string,
+    wallet: Wallet,
+    requesterId: string
+): Promise<{ value: string; salt: string } | null> {
+    if (attrName === 'anonymous_id') {
+        // Compute anonymous_id using KeyedHashing(anonymizing_scheme, anonymizing_key, requester_id)
+        const anonymousId = await withAnonymizingKey((anonymizingKey) => {
+            const requesterIdBytes = new TextEncoder().encode(requesterId);
+            const anonymousIdHash = hash(
+                wallet.anonymizing_hashing_scheme,
+                anonymizingKey,
+                requesterIdBytes as any
+            );
+            return Buffer.from(anonymousIdHash).toString('base64');
+        });
+
+        // Generate random salt - it's sent with the accept request anyway
+        const saltBytes = Crypto.getRandomBytes(32);
+        const salt = btoa(String.fromCharCode(...saltBytes));
+
+        return { value: anonymousId, salt };
+    }
+
+    // Not a special attribute
+    return null;
+}
+
+/**
  * Accept an identity challenge
  * Encrypts identity attributes and submits acceptance to Powm server
  */
@@ -127,26 +159,38 @@ export async function acceptChallenge(
 
     const hashingScheme = wallet.identity_attribute_hashing_scheme;
     const requestedAttrs = claimResponse.challenge.identity_attributes;
+    const requesterId = claimResponse.claim.requester_id;
+    let includeAnonymizingKey = false;
 
     // CRITICAL: Use challenge.identity_attributes array order (already sorted by server)
     // DO NOT sort again - this is the canonical order
     for (const attrName of requestedAttrs) {
-        if (!(attrName in wallet.attributes)) {
+        let value: string;
+        let salt: string;
+
+        // Check for anonymous_id attribute first
+        const anonIdAttr = await handleAnonymousIdAttribute(attrName, wallet, requesterId);
+        if (anonIdAttr) {
+            value = anonIdAttr.value;
+            salt = anonIdAttr.salt;
+            includeAnonymizingKey = true;
+            console.log('value', value);
+        } else if (attrName in wallet.attributes) {
+            value = wallet.attributes[attrName].value;
+            salt = wallet.attributes[attrName].salt;
+        } else {
             // Wallet doesn't have this attribute - set to null and skip hash computation
             attributePayload[attrName] = null as any;
-            // Note: We don't compute a hash or include salt for missing attributes
             continue;
         }
 
-        const { value, salt } = wallet.attributes[attrName];
+        // Add to payload and salts
         attributePayload[attrName] = value;
-        requestedSalts[attrName] = salt; // Collect salts for request
+        requestedSalts[attrName] = salt;
 
-        // Decode wallet's salt and compute hash
+        // Compute hash
         const saltBytes = Uint8Array.from(atob(salt), c => c.charCodeAt(0));
-        const encoder = new TextEncoder();
-        const valueBytes = encoder.encode(value);
-
+        const valueBytes = new TextEncoder().encode(value);
         const attrHash = hash(hashingScheme, saltBytes as any, valueBytes as any);
         orderedHashes.push(attrHash as any);
     }
@@ -209,14 +253,21 @@ export async function acceptChallenge(
         .map(key => `${key}:${requestedSalts[key]}`)
         .join(',');
 
-    // Build signing string for accept (NEW FORMAT with salts)
-    // Format: time|nonce|challenge_id|wallet_id|identity_hash|salts_string|wallet_key|nonce|encrypted|
-    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|${identityHashB64}|${saltsString}|${walletKeyB64}|${nonceB64}|${ciphertextB64}|`;
+    // Get anonymizing key if needed
+    const anonymizingKeyB64 = includeAnonymizingKey
+        ? await withAnonymizingKey((key) => key.toString('base64'))
+        : undefined;
 
-    // Sign the string
-    const sigBytes = new TextEncoder().encode(signingString);
-    const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
-    const signatureB64 = Buffer.from(signature).toString('base64');
+    // Build signing string for accept (NEW FORMAT with salts)
+    // Format: time|nonce|challenge_id|wallet_id|identity_hash|salts_string|wallet_key|nonce|encrypted|anonymizing_key|
+    const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|${identityHashB64}|${saltsString}|${walletKeyB64}|${nonceB64}|${ciphertextB64}|${anonymizingKeyB64 || ''}|`;
+
+    // Sign the string using wallet's signing key (retrieved only for signing)
+    const signatureB64 = await withSigningKey((privateKey) => {
+        const sigBytes = new TextEncoder().encode(signingString);
+        const signature = sign(wallet.signing_algorithm, privateKey, sigBytes as any);
+        return Buffer.from(signature).toString('base64');
+    });
 
     // Submit acceptance with salts included
     await acceptIdentityChallenge({
@@ -225,10 +276,11 @@ export async function acceptChallenge(
         challenge_id: challengeId,
         wallet_id: wallet.id,
         identity_hash: identityHashB64,
-        identity_attribute_hashing_salts: requestedSalts, // NEW: Send salts to server
+        identity_attribute_hashing_salts: requestedSalts,
         identity_encrypting_wallet_key: walletKeyB64,
         identity_encrypting_nonce: nonceB64,
         identity_encrypted: ciphertextB64,
+        anonymizing_key: anonymizingKeyB64,
         wallet_signature: signatureB64,
     });
 }
@@ -255,10 +307,12 @@ export async function rejectChallenge(
     // Build signing string for reject: {time}|{nonce}|{challenge_id}|{wallet_id}|
     const signingString = `${time}|${requestNonce}|${challengeId}|${wallet.id}|`;
 
-    // Sign the string
-    const sigBytes = new TextEncoder().encode(signingString);
-    const signature = sign(wallet.signing_algorithm, wallet.private_key, sigBytes as any);
-    const signatureB64 = Buffer.from(signature).toString('base64');
+    // Sign the string using wallet's signing key (retrieved only for signing)
+    const signatureB64 = await withSigningKey((privateKey) => {
+        const sigBytes = new TextEncoder().encode(signingString);
+        const signature = sign(wallet.signing_algorithm, privateKey, sigBytes as any);
+        return Buffer.from(signature).toString('base64');
+    });
 
     // Submit rejection
     await rejectIdentityChallenge({
@@ -280,16 +334,19 @@ export async function createWalletChallenge(
     const encryptingScheme = 'ecdhp256_hkdfsha256_aes256gcm';
     const ephemeralKeys = generateKeyPair(encryptingScheme);
     const publicKeyB64 = Buffer.from(ephemeralKeys.publicKeySpkiDer).toString('base64');
-    const signingPrivateKeyB64 = Buffer.from(wallet.private_key).toString('base64');
 
-    const challenge = await createIdentityChallenge(
-        wallet.id,
-        attributes,
-        encryptingScheme,
-        publicKeyB64,
-        wallet.signing_algorithm,
-        signingPrivateKeyB64
-    );
+    // Use withSigningKey to sign the challenge
+    const challenge = await withSigningKey(async (privateKey) => {
+        const signingPrivateKeyB64 = privateKey.toString('base64');
+        return await createIdentityChallenge(
+            wallet.id,
+            attributes,
+            encryptingScheme,
+            publicKeyB64,
+            wallet.signing_algorithm,
+            signingPrivateKeyB64
+        );
+    });
 
     return {
         challengeId: challenge.challenge_id,

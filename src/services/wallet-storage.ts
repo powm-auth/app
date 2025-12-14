@@ -1,30 +1,30 @@
 /**
  * Wallet Secure Storage Service
  * Hybrid approach:
- * - SecureStore: ID, private_key, public_key (most sensitive)
- * - Encrypted file: attributes, metadata (unlimited size)
+ * - SecureStore: private_key only (base64, retrieved only for signing)
+ * - Encrypted file: id, public_key, attributes, metadata (unlimited size)
  */
 
+import { resetAnonymizingKey as resetAnonymizingKeyApi } from '@/services/powm-api';
 import type { Wallet } from '@/types/powm';
 import { gcm } from '@noble/ciphers/aes';
+import { signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
 import * as Crypto from 'expo-crypto';
 import { File, Paths } from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
 
-// Storage-specific types (serialized formats)
-interface WalletSecureData {
-    id: string;
-    private_key: string; // Base64 PKCS8 DER
-    public_key: string; // Base64 SPKI DER
-}
+const { sign } = signing;
 
+// Storage-specific types (serialized formats)
 interface WalletFileData {
     id: string;
+    public_key: string; // Base64 SPKI DER
     created_at: string; // ISO 8601
     updated_at: string | null; // ISO 8601
     signing_algorithm: string;
     identity_attribute_hashing_scheme: string;
+    anonymizing_hashing_scheme: string;
     attributes: Record<string, { value: string; salt: string }>;
 }
 
@@ -47,7 +47,8 @@ function sortObjectKeys<T extends Record<string, any>>(obj: T): T {
     return sorted;
 }
 
-const SECURE_KEYS_STORAGE_KEY = 'powm_wallet_keys';
+const SIGNING_PRIVATE_KEY_STORAGE_KEY = 'powm_wallet_signing_private_key';
+const ANONYMIZING_KEY_STORAGE_KEY = 'powm_wallet_anonymizing_key';
 const WALLET_FILE = new File(Paths.document, 'wallet_data.enc');
 const ENCRYPTION_KEY_STORAGE_KEY = 'powm_wallet_encryption_key';
 
@@ -71,9 +72,9 @@ async function getFileEncryptionKey(): Promise<string> {
  */
 export async function hasWallet(): Promise<boolean> {
     try {
-        const secureData = await SecureStore.getItemAsync(SECURE_KEYS_STORAGE_KEY);
+        const privateKey = await SecureStore.getItemAsync(SIGNING_PRIVATE_KEY_STORAGE_KEY);
         const fileExists = WALLET_FILE.exists;
-        return secureData !== null && fileExists;
+        return privateKey !== null && fileExists;
     } catch (error) {
         console.error('Error checking wallet existence:', error);
         return false;
@@ -81,17 +82,17 @@ export async function hasWallet(): Promise<boolean> {
 }
 
 /**
- * Load wallet from hybrid storage
+ * Load wallet from hybrid storage (without private key)
+ * Private key is only retrieved when needed for signing via withPrivateKey()
  * @returns Wallet object or null if not found
  */
 export async function loadWallet(): Promise<Wallet | null> {
     try {
-        // Load secure data from SecureStore
-        const secureDataJson = await SecureStore.getItemAsync(SECURE_KEYS_STORAGE_KEY);
-        if (!secureDataJson) {
+        // Check that private key exists (but don't load it)
+        const hasPrivateKey = await SecureStore.getItemAsync(SIGNING_PRIVATE_KEY_STORAGE_KEY);
+        if (!hasPrivateKey) {
             return null;
         }
-        const secureData: WalletSecureData = JSON.parse(secureDataJson);
 
         // Load and decrypt file data
         const fileExists = WALLET_FILE.exists;
@@ -107,23 +108,15 @@ export async function loadWallet(): Promise<Wallet | null> {
         const decryptedJson = await decryptWalletFile(encryptedContent, encryptionKey);
         const fileData: WalletFileData = JSON.parse(decryptedJson);
 
-        // Verify ID coherence
-        if (secureData.id !== fileData.id) {
-            console.error('Wallet ID mismatch between secure storage and file');
-            // Delete corrupted wallet data
-            await deleteWallet();
-            return null;
-        }
-
-        // Combine into full wallet object with native types
+        // Build wallet object with native types (no private key)
         const wallet: Wallet = {
-            id: secureData.id,
-            private_key: Buffer.from(secureData.private_key, 'base64'),
-            public_key: Buffer.from(secureData.public_key, 'base64'),
+            id: fileData.id,
+            public_key: Buffer.from(fileData.public_key, 'base64'),
             created_at: new Date(fileData.created_at),
             updated_at: fileData.updated_at ? new Date(fileData.updated_at) : null,
             signing_algorithm: fileData.signing_algorithm,
             identity_attribute_hashing_scheme: fileData.identity_attribute_hashing_scheme,
+            anonymizing_hashing_scheme: fileData.anonymizing_hashing_scheme,
             attributes: fileData.attributes,
         };
 
@@ -135,41 +128,114 @@ export async function loadWallet(): Promise<Wallet | null> {
 }
 
 /**
+ * Execute a function with the signing private key, then dispose of it
+ * This ensures the private key is only in memory for the minimum time needed
+ * @param callback - Function that receives the private key buffer and returns a result
+ * @returns The result of the callback
+ */
+export async function withSigningKey<T>(
+    callback: (privateKey: Buffer) => T | Promise<T>
+): Promise<T> {
+    const privateKeyB64 = await SecureStore.getItemAsync(SIGNING_PRIVATE_KEY_STORAGE_KEY);
+    if (!privateKeyB64) {
+        throw new Error('Signing private key not found in secure storage');
+    }
+
+    // Convert to buffer
+    let privateKey: Buffer | null = Buffer.from(privateKeyB64, 'base64');
+
+    try {
+        // Execute the callback with the private key
+        const result = await callback(privateKey);
+        return result;
+    } finally {
+        // Zero out the buffer to dispose of the key material
+        if (privateKey) {
+            privateKey.fill(0);
+            privateKey = null;
+        }
+    }
+}
+
+/**
+ * Execute a function with the anonymizing key (HMAC-SHA512), then dispose of it
+ * This key is used for generating anonymous identifiers
+ * @param callback - Function that receives the anonymizing key buffer and returns a result
+ * @returns The result of the callback
+ */
+export async function withAnonymizingKey<T>(
+    callback: (anonymizingKey: Buffer) => T | Promise<T>
+): Promise<T> {
+    const keyB64 = await SecureStore.getItemAsync(ANONYMIZING_KEY_STORAGE_KEY);
+    if (!keyB64) {
+        throw new Error('Anonymizing key not found in secure storage');
+    }
+
+    // Convert to buffer
+    let anonymizingKey: Buffer | null = Buffer.from(keyB64, 'base64');
+
+    try {
+        // Execute the callback with the anonymizing key
+        const result = await callback(anonymizingKey);
+        return result;
+    } finally {
+        // Zero out the buffer to dispose of the key material
+        if (anonymizingKey) {
+            anonymizingKey.fill(0);
+            anonymizingKey = null;
+        }
+    }
+}
+
+/**
  * Save wallet to hybrid storage
  * @param wallet - Wallet object to save
+ * @param signingPrivateKey - Signing private key buffer (required for saving)
+ * @param anonymizingKey - HMAC-SHA512 anonymizing key buffer (required for saving)
  * @returns true if successful, false otherwise
  */
-export async function saveWallet(wallet: Wallet): Promise<boolean> {
+export async function saveWallet(
+    wallet: Wallet,
+    signingPrivateKey: Buffer,
+    anonymizingKey: Buffer
+): Promise<boolean> {
     try {
-        // Split wallet data and convert to storage formats
-        const secureData: WalletSecureData = {
-            id: wallet.id,
-            private_key: wallet.private_key.toString('base64'),
-            public_key: wallet.public_key.toString('base64'),
-        };
+        // Store keys as raw base64 in SecureStore
+        // Ensure proper Buffer conversion for base64 encoding
+        const signingPrivateKeyB64 = Buffer.from(signingPrivateKey).toString('base64');
+        const anonymizingKeyB64 = Buffer.from(anonymizingKey).toString('base64');
+
+        // Ensure public_key is properly converted to base64
+        const publicKeyB64 = Buffer.from(wallet.public_key).toString('base64');
 
         const fileData: WalletFileData = {
             id: wallet.id,
+            public_key: publicKeyB64,
             attributes: wallet.attributes,
             created_at: wallet.created_at.toISOString(),
             identity_attribute_hashing_scheme: wallet.identity_attribute_hashing_scheme,
+            anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,
             signing_algorithm: wallet.signing_algorithm,
             updated_at: wallet.updated_at ? wallet.updated_at.toISOString() : null,
         };
 
         // Sort keys for consistent serialization
-        const sortedSecureData = sortObjectKeys(secureData);
         const sortedFileData = sortObjectKeys(fileData);
 
-        console.log('[WalletStorage] Saving secure data:', JSON.stringify(sortedSecureData, null, 2));
         console.log('[WalletStorage] Saving file data:', JSON.stringify(sortedFileData, null, 2));
 
-        // Save secure data to SecureStore
-        await SecureStore.setItemAsync(SECURE_KEYS_STORAGE_KEY, JSON.stringify(sortedSecureData));
+        // Save keys as raw base64 to SecureStore
+        await SecureStore.setItemAsync(SIGNING_PRIVATE_KEY_STORAGE_KEY, signingPrivateKeyB64);
+        await SecureStore.setItemAsync(ANONYMIZING_KEY_STORAGE_KEY, anonymizingKeyB64);
 
         // Encrypt and save file data
         const encryptionKey = await getFileEncryptionKey();
         const encryptedContent = await encryptWalletFile(JSON.stringify(sortedFileData), encryptionKey);
+
+        // Delete existing file if it exists, then create and write
+        if (WALLET_FILE.exists) {
+            await WALLET_FILE.delete();
+        }
         await WALLET_FILE.create();
         await WALLET_FILE.write(encryptedContent);
 
@@ -187,7 +253,8 @@ export async function saveWallet(wallet: Wallet): Promise<boolean> {
  */
 export async function deleteWallet(): Promise<boolean> {
     try {
-        await SecureStore.deleteItemAsync(SECURE_KEYS_STORAGE_KEY);
+        await SecureStore.deleteItemAsync(SIGNING_PRIVATE_KEY_STORAGE_KEY);
+        await SecureStore.deleteItemAsync(ANONYMIZING_KEY_STORAGE_KEY);
 
         const fileExists = WALLET_FILE.exists;
         if (fileExists) {
@@ -200,6 +267,104 @@ export async function deleteWallet(): Promise<boolean> {
         console.error('Error deleting wallet:', error);
         return false;
     }
+}
+
+/**
+ * Rotate the anonymizing key via server API
+ * This requests a new anonymizing key from the server and stores it locally
+ * Use this to invalidate any previously generated anonymous identifiers
+ * @returns true if successful, false otherwise
+ */
+export async function rotateAnonymizingKey(): Promise<boolean> {
+    try {
+        // Load wallet to get ID and signing algorithm
+        const wallet = await loadWallet();
+        if (!wallet) {
+            throw new Error('No wallet found - cannot rotate anonymizing key');
+        }
+
+        // Generate nonce (32 chars, URL-safe base64)
+        const randomBytes = Crypto.getRandomBytes(32);
+        const nonce = btoa(String.fromCharCode(...randomBytes))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '')
+            .substring(0, 32);
+
+        // Get current time in UTC ISO format (matching server format)
+        const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+        // Build signing string: time|nonce|wallet_id|
+        const signingString = `${time}|${nonce}|${wallet.id}|`;
+
+        // Sign using the wallet's signing key
+        const walletSignature = await withSigningKey((privateKey) => {
+            const dataBytes = Buffer.from(signingString, 'utf-8');
+            const signature = sign(
+                wallet.signing_algorithm,
+                privateKey,
+                dataBytes as any
+            );
+            return Buffer.from(signature).toString('base64');
+        });
+
+        // Call server API to reset the anonymizing key
+        const response = await resetAnonymizingKeyApi({
+            time,
+            nonce,
+            wallet_id: wallet.id,
+            wallet_signature: walletSignature,
+        });
+
+        // Store the new key from server
+        const newKeyB64 = response.anonymizing_key;
+        await SecureStore.setItemAsync(ANONYMIZING_KEY_STORAGE_KEY, newKeyB64);
+
+        // Update the anonymizing hashing scheme in wallet file if it changed
+        if (response.anonymizing_hashing_scheme !== wallet.anonymizing_hashing_scheme) {
+            const updatedWallet: Wallet = {
+                ...wallet,
+                anonymizing_hashing_scheme: response.anonymizing_hashing_scheme,
+                updated_at: new Date(),
+            };
+            await updateWalletFile(updatedWallet);
+        }
+
+        console.log('Anonymizing key rotated successfully via server');
+        return true;
+    } catch (error) {
+        console.error('Error rotating anonymizing key:', error);
+        return false;
+    }
+}
+
+/**
+ * Update only the wallet file data (not the secure keys)
+ * Used for updating metadata like anonymizing_hashing_scheme
+ */
+async function updateWalletFile(wallet: Wallet): Promise<void> {
+    const publicKeyB64 = Buffer.from(wallet.public_key).toString('base64');
+
+    const fileData: WalletFileData = {
+        id: wallet.id,
+        public_key: publicKeyB64,
+        attributes: wallet.attributes,
+        created_at: wallet.created_at.toISOString(),
+        identity_attribute_hashing_scheme: wallet.identity_attribute_hashing_scheme,
+        anonymizing_hashing_scheme: wallet.anonymizing_hashing_scheme,
+        signing_algorithm: wallet.signing_algorithm,
+        updated_at: wallet.updated_at ? wallet.updated_at.toISOString() : null,
+    };
+
+    const sortedFileData = sortObjectKeys(fileData);
+    const encryptionKey = await getFileEncryptionKey();
+    const encryptedContent = await encryptWalletFile(JSON.stringify(sortedFileData), encryptionKey);
+
+    if (WALLET_FILE.exists) {
+        await WALLET_FILE.delete();
+    }
+    await WALLET_FILE.create();
+    await WALLET_FILE.write(encryptedContent);
 }
 
 /**

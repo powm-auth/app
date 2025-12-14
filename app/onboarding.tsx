@@ -13,7 +13,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, ActionSheetIOS, Modal } from 'react-native';
+import { ActionSheetIOS, Alert, Animated, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -235,7 +235,7 @@ export default function OnboardingScreen() {
                 }
             }
 
-            const { wallet, publicKeySpkiDer } = createWallet(attributesMap, identityData.signing_algorithm);
+            const { wallet, signingPrivateKey, publicKeySpkiDer } = createWallet(attributesMap, identityData.signing_algorithm);
 
             // Map UI algorithm names to API scheme names
             const schemeMapping: Record<string, string> = {
@@ -244,7 +244,7 @@ export default function OnboardingScreen() {
                 'Ed25519': 'EdDsaEd25519',
             };
 
-            // Submit onboarding data to server and get back attributes with salts
+            // Submit onboarding data to server and get back attributes with salts + anonymizing key
             const serverResponse = await testOnboardWallet({
                 first_name: identityData.first_name,
                 middle_names: identityData.middle_names || undefined,
@@ -259,16 +259,22 @@ export default function OnboardingScreen() {
                 signing_public_key: publicKeySpkiDer,
             });
 
-            // Create final wallet with server-assigned ID and attributes with salts
-            const finalWallet = createWalletFromOnboarding(
+            // Decode server-provided anonymizing key from base64
+            const anonymizingKey = Buffer.from(serverResponse.anonymizing_key, 'base64');
+
+            // Create final wallet with server-assigned ID, attributes with salts, and anonymizing scheme
+            const { wallet: finalWallet, signingPrivateKey: finalSigningKey } = createWalletFromOnboarding(
                 serverResponse.wallet_id,
                 serverResponse.identity_attributes,
                 serverResponse.identity_attribute_hashing_scheme,
+                serverResponse.anonymizing_hashing_scheme,
                 identityData.signing_algorithm,
-                wallet.private_key,
+                signingPrivateKey,
                 wallet.public_key
-            );            // Save wallet to secure storage after successful server registration
-            const saved = await saveWallet(finalWallet);
+            );
+
+            // Save wallet to secure storage after successful server registration
+            const saved = await saveWallet(finalWallet, finalSigningKey, anonymizingKey);
             if (!saved) {
                 throw new Error('Failed to save wallet to secure storage');
             }
