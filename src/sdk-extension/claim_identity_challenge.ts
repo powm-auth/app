@@ -4,6 +4,7 @@ import * as Crypto from 'expo-crypto';
 import { POWM_API_BASE } from './constants';
 import { ClaimChallengeRequest, ClaimChallengeResponse, ClaimIdentityChallengeError } from './structs';
 import { fetchWithTimeout } from './utils';
+import { verifyClaimSignature } from './verify_claim_signature';
 
 export type Signer = (data: Uint8Array) => Promise<string>;
 
@@ -70,6 +71,14 @@ export async function claimIdentityChallenge(
         throw new ClaimIdentityChallengeError(
             'INVALID_SIGNATURE',
             'Invalid challenge signature from server'
+        );
+    }
+
+    // Verify the claim Powm signature
+    if (!verifyClaimSignature(claimResponse.claim)) {
+        throw new ClaimIdentityChallengeError(
+            'INVALID_SIGNATURE',
+            'Invalid claim signature from server'
         );
     }
 

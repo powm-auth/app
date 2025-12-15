@@ -38,7 +38,8 @@ export interface ClaimChallengeResponse {
         reclaimed: boolean;
         wallet_id: string;
         can_accept: boolean;
-        // ADD SIGNATURE!!!!
+        powm_signing_scheme?: string;
+        powm_signature?: string;
     };
     challenge: IdentityChallenge;
 }
@@ -229,5 +230,16 @@ export class DeleteWalletError extends Error {
     ) {
         super(message);
         this.name = 'DeleteWalletError';
+    }
+}
+export class VerifyClaimSignatureError extends Error {
+    code: string;
+    cause?: Error;
+
+    constructor(code: string, message: string, cause?: Error) {
+        super(message);
+        this.code = code;
+        this.name = 'VerifyClaimSignatureError';
+        this.cause = cause;
     }
 }
