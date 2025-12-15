@@ -6,6 +6,7 @@
 import { acceptIdentityChallenge, claimIdentityChallenge, rejectIdentityChallenge } from '@/services/powm-api';
 import { loadWallet, withAnonymizingKey, withSigningKey } from '@/services/wallet-storage';
 import type { ClaimChallengeResponse, Wallet } from '@/types/powm';
+import { ATTRIBUTE_DISPLAY_NAMES } from '@/utils/constants';
 import { createIdentityChallenge, decryptAndVerifyIdentity, decryptIdentityChallengeResponse, verifyIdentityChallengeSignature, waitForCompletedIdentityChallenge } from '@powm/sdk-js';
 import { encrypting, keyedHashing, signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
@@ -18,25 +19,28 @@ const { hash } = keyedHashing;
 // Current wallet instance cache
 let currentWallet: Wallet | null = null;
 
-export const ATTRIBUTE_DISPLAY_NAMES: Record<string, string> = {
-    'anonymous_id': 'Anonymous Unique ID',
-    'first_name': 'First Name',
-    'last_name': 'Last Name',
-    'date_of_birth': 'Date of Birth',
-    'age_over_18': 'Age Over 18',
-    'age_over_21': 'Age Over 21',
-    'nationality': 'Nationality',
-    'gender': 'Gender',
-    'email': 'Email Address',
-    'phone_number': 'Phone Number',
-};
-
 export function getAttributeDisplayName(key: string): string {
     if (ATTRIBUTE_DISPLAY_NAMES[key]) {
         return ATTRIBUTE_DISPLAY_NAMES[key];
     }
     // Fallback: replace underscores with spaces and capitalize words
+    console.warn(`Display name not found for attribute key: ${key}`);
     return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+/**
+ * Sort attribute keys based on the standard display order
+ */
+export function sortAttributeKeys(keys: string[]): string[] {
+    const displayOrder = Object.keys(ATTRIBUTE_DISPLAY_NAMES);
+    return [...keys].sort((a, b) => {
+        const indexA = displayOrder.indexOf(a);
+        const indexB = displayOrder.indexOf(b);
+        if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
 }
 
 /**

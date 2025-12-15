@@ -33,6 +33,9 @@ export const powmColors = {
   deletionRedAlt: '#4D1617',
   deletionRedMain: '#FF453A',
 
+  // Success
+  successGreen: '#32D74B',
+
   // Glass Morphism
   glass: {
     background: 'rgba(30, 28, 40, 0.6)',

@@ -6,19 +6,20 @@ import {
   PowmText,
   ScreenHeader
 } from '@/components';
+import { getAttributeDisplayName, sortAttributeKeys } from '@/services/wallet-service';
 import { loadWallet } from '@/services/wallet-storage';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const InfoItem = ({ label, value, index }: { label: string; value: string; index: number }) => {
   return (
     <AnimatedEntry index={index} slideDistance={20}>
       <View style={styles.infoItem}>
-        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4, textTransform: 'capitalize' }}>
-          {label.replace(/_/g, ' ')}
+        <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 13, marginBottom: 4 }}>
+          {getAttributeDisplayName(label)}
         </PowmText>
         <PowmText variant="subtitleSemiBold" style={{ fontSize: 16 }}>
           {value}
@@ -41,6 +42,31 @@ export default function PersonalInfoScreen() {
     });
   }, []);
 
+  const sortedKeys = attributes ? sortAttributeKeys(Object.keys(attributes)) : [];
+
+  const handleRefreshAge = () => {
+    Alert.alert(
+      "Refresh Age Attributes?",
+      "This will check if you now meet new age requirements (like 18+ or 21+).\n\n" +
+      "To do this, your Date of Birth will be securely sent to the Powm server for verification.\n\n" +
+      "• The server verifies your DOB\n" +
+      "• Calculates your current age\n" +
+      "• Updates your age flags (e.g., \"Age Over 18: Yes\")\n" +
+      "• Returns the signed update to your wallet\n\n" +
+      "Your DOB is processed only for this calculation and is not stored.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Refresh",
+          onPress: () => {
+            // TODO: Implement age refresh logic
+            console.log("Refresh age clicked");
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <BackgroundImage>
       <View style={styles.container}>
@@ -54,15 +80,15 @@ export default function PersonalInfoScreen() {
           <ScreenHeader title="Identity" />
 
           <PowmText variant="text" color={powmColors.inactive} align="center" style={{ marginBottom: powmSpacing.xl }}>
-            Information extracted from your documents
+            This information is what's stored inside your local Powm identity wallet.
           </PowmText>
 
-          {attributes && Object.keys(attributes).length > 0 ? (
+          {attributes && sortedKeys.length > 0 ? (
             <GlassCard style={{ marginBottom: powmSpacing.xl }}>
-              {Object.entries(attributes).map(([key, data], index) => (
+              {sortedKeys.map((key, index) => (
                 <React.Fragment key={key}>
-                  <InfoItem label={key} value={data.value} index={index} />
-                  {index < Object.keys(attributes).length - 1 && <View style={styles.separator} />}
+                  <InfoItem label={key} value={attributes[key].value} index={index} />
+                  {index < sortedKeys.length - 1 && <View style={styles.separator} />}
                 </React.Fragment>
               ))}
             </GlassCard>
@@ -78,6 +104,15 @@ export default function PersonalInfoScreen() {
             title="Scan new document"
             icon="qrcode"
             onPress={() => router.push('/scan-document')}
+          />
+
+          <View style={{ height: powmSpacing.md }} />
+
+          <Button
+            title="Refresh Age Attributes"
+            icon="candle"
+            variant="secondary"
+            onPress={handleRefreshAge}
           />
 
         </ScrollView>

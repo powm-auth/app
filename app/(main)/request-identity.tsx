@@ -9,7 +9,7 @@ import {
     Row,
     Toggle
 } from '@/components';
-import { createWalletChallenge, getCurrentWallet, pollChallenge } from '@/services/wallet-service';
+import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -18,13 +18,13 @@ import QRCode from 'react-native-qrcode-svg';
 
 // Available attributes to request
 const AVAILABLE_ATTRIBUTES = [
-    { key: 'first_name', label: 'First Name', description: 'Legal first name' },
-    { key: 'last_name', label: 'Last Name', description: 'Legal last name' },
-    { key: 'date_of_birth', label: 'Date of Birth', description: 'Full date of birth' },
-    { key: 'age_over_18', label: 'Age Over 18', description: 'Verify adult status' },
-    { key: 'age_over_21', label: 'Age Over 21', description: 'Verify 21+ status' },
-    { key: 'nationality', label: 'Nationality', description: 'Country of citizenship' },
-    { key: 'gender', label: 'Gender', description: 'Gender identity' },
+    { key: 'first_name', description: 'Legal first name' },
+    { key: 'last_name', description: 'Legal last name' },
+    { key: 'date_of_birth', description: 'Full date of birth' },
+    { key: 'age_over_18', description: 'Verify adult status' },
+    { key: 'age_over_21', description: 'Verify 21+ status' },
+    { key: 'nationality', description: 'Country of citizenship' },
+    { key: 'gender', description: 'Gender identity' },
 ];
 
 export default function RequestIdentityScreen() {
@@ -180,7 +180,7 @@ export default function RequestIdentityScreen() {
                                     <GlassCard key={attr.key} padding={powmSpacing.md}>
                                         <Row justify="space-between" align="center">
                                             <Column flex={1} gap={4}>
-                                                <PowmText variant="subtitleSemiBold">{attr.label}</PowmText>
+                                                <PowmText variant="subtitleSemiBold">{getAttributeDisplayName(attr.key)}</PowmText>
                                                 <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 12 }}>
                                                     {attr.description}
                                                 </PowmText>
@@ -230,7 +230,7 @@ export default function RequestIdentityScreen() {
                                         <PowmIcon name="clock" size={20} color={powmColors.electricMain} />
                                         <PowmText variant="text">Time Remaining</PowmText>
                                     </Row>
-                                    <PowmText variant="subtitleSemiBold" color={timeRemaining < 60 ? powmColors.error : powmColors.electricMain}>
+                                    <PowmText variant="subtitleSemiBold" color={timeRemaining < 60 ? powmColors.deletionRedMain : powmColors.electricMain}>
                                         {formatTime(timeRemaining)}
                                     </PowmText>
                                 </Row>
@@ -243,7 +243,7 @@ export default function RequestIdentityScreen() {
                                 </PowmText>
                                 {selectedAttributes.map((attr, idx) => (
                                     <PowmText key={idx} variant="text" color={powmColors.inactive}>
-                                        • {AVAILABLE_ATTRIBUTES.find(a => a.key === attr)?.label}
+                                        • {getAttributeDisplayName(attr)}
                                     </PowmText>
                                 ))}
                             </GlassCard>
@@ -266,9 +266,9 @@ export default function RequestIdentityScreen() {
                     {stage === 'completed' && identityData && (
                         <Column align="center" gap={powmSpacing.lg}>
                             <View style={styles.successIcon}>
-                                <PowmIcon name="check" color={powmColors.success} size={48} />
+                                <PowmIcon name="check" color={powmColors.successGreen} size={48} />
                             </View>
-                            <PowmText variant="title" color={powmColors.success}>
+                            <PowmText variant="title" color={powmColors.successGreen}>
                                 Identity Verified!
                             </PowmText>
 
@@ -292,7 +292,7 @@ export default function RequestIdentityScreen() {
                                     return (
                                         <Row key={key} justify="space-between" style={{ marginBottom: powmSpacing.sm }}>
                                             <PowmText variant="text" color={powmColors.gray}>
-                                                {AVAILABLE_ATTRIBUTES.find(a => a.key === key)?.label || key}:
+                                                {getAttributeDisplayName(key)}:
                                             </PowmText>
                                             <PowmText variant="text" color={powmColors.white} style={{ flexShrink: 1, textAlign: 'right' }}>
                                                 {displayValue}
@@ -313,9 +313,9 @@ export default function RequestIdentityScreen() {
                     {stage === 'error' && (
                         <Column align="center" gap={powmSpacing.lg}>
                             <View style={styles.errorIcon}>
-                                <PowmIcon name="close" color={powmColors.error} size={48} />
+                                <PowmIcon name="cross" color={powmColors.deletionRedMain} size={48} />
                             </View>
-                            <PowmText variant="title" color={powmColors.error}>
+                            <PowmText variant="title" color={powmColors.deletionRedMain}>
                                 Request Failed
                             </PowmText>
                             <PowmText variant="text" color={powmColors.inactive} align="center">

@@ -10,7 +10,8 @@ import {
   acceptChallenge,
   getAttributeDisplayName,
   getCurrentWallet,
-  rejectChallenge
+  rejectChallenge,
+  sortAttributeKeys
 } from '@/services/wallet-service';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import type { ClaimChallengeResponse } from '@/types/powm';
@@ -79,6 +80,8 @@ export default function ValidateIdentityScreen() {
     router.dismissAll();
   };
 
+  const sortedRequestedAttrs = sortAttributeKeys(requestedAttrs);
+
   return (
     <BackgroundImage>
       <View style={[styles.container, { paddingTop: insets.top + powmSpacing.sm, paddingBottom: insets.bottom + powmSpacing.lg }]}>
@@ -102,16 +105,23 @@ export default function ValidateIdentityScreen() {
               <Column gap={powmSpacing.md}>
                 <PowmText variant="subtitle" align="center" style={{ fontSize: 20, marginBottom: powmSpacing.md }}>Requested Information</PowmText>
 
-                {requestedAttrs.map((attr, idx) => (
-                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <PowmText variant="text" color={powmColors.gray} style={{ flex: 1 }}>
-                      {getAttributeDisplayName(attr)}
-                    </PowmText>
-                    <PowmText variant="text" color={powmColors.electricMain} style={{ flex: 1, textAlign: 'right' }}>
-                      {attr === 'anonymous_id' ? 'Generated ID' : (walletAttrs[attr]?.value || 'Not available')}
-                    </PowmText>
-                  </View>
-                ))}
+                {sortedRequestedAttrs.map((attr, idx) => {
+                  const hasValue = attr === 'anonymous_id' || !!walletAttrs[attr]?.value;
+                  return (
+                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <PowmText variant="text" color={powmColors.gray} style={{ flex: 1 }}>
+                        {getAttributeDisplayName(attr)}
+                      </PowmText>
+                      <PowmText
+                        variant="text"
+                        color={hasValue ? powmColors.electricMain : powmColors.inactive}
+                        style={{ flex: 1, textAlign: 'right', opacity: hasValue ? 1 : 0.6 }}
+                      >
+                        {attr === 'anonymous_id' ? 'Generated ID' : (walletAttrs[attr]?.value || 'Not available')}
+                      </PowmText>
+                    </View>
+                  );
+                })}
 
                 <View style={{ marginTop: powmSpacing.lg }}>
                   <PowmText variant="text" color={powmColors.inactive} style={styles.descriptionText}>

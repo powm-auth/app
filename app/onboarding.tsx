@@ -7,6 +7,7 @@ import {
 } from '@/components';
 import { testOnboardWallet } from '@/services/powm-api';
 import { createWallet, createWalletFromOnboarding } from '@/services/wallet-generation';
+import { getAttributeDisplayName } from '@/services/wallet-service';
 import { saveWallet } from '@/services/wallet-storage';
 import { powmSpacing } from '@/theme/powm-tokens';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -58,8 +59,8 @@ const STEPS = [
         title: 'Personal Information',
         description: 'Let\'s start with your basic information',
         fields: [
-            { key: 'first_name', label: 'First Name', required: true, type: 'text' },
-            { key: 'last_name', label: 'Last Name', required: true, type: 'text' },
+            { key: 'first_name', label: getAttributeDisplayName('first_name'), required: true, type: 'text' },
+            { key: 'last_name', label: getAttributeDisplayName('last_name'), required: true, type: 'text' },
         ]
     },
     {
@@ -67,9 +68,9 @@ const STEPS = [
         title: 'Birth Details',
         description: 'Information about your birth',
         fields: [
-            { key: 'date_of_birth', label: 'Date of Birth', required: true, type: 'date' },
-            { key: 'birth_country', label: 'Country of Birth', required: true, type: 'country' },
-            { key: 'gender', label: 'Gender', required: true, type: 'gender' },
+            { key: 'date_of_birth', label: getAttributeDisplayName('date_of_birth'), required: true, type: 'date' },
+            { key: 'birth_country', label: getAttributeDisplayName('birth_country'), required: true, type: 'country' },
+            { key: 'gender', label: getAttributeDisplayName('gender'), required: true, type: 'gender' },
         ]
     },
     {
@@ -77,9 +78,9 @@ const STEPS = [
         title: 'Nationality',
         description: 'Your citizenship information',
         fields: [
-            { key: 'nationality_1', label: 'Primary Nationality', required: true, type: 'country' },
-            { key: 'nationality_2', label: 'Second Nationality (optional)', required: false, type: 'country' },
-            { key: 'nationality_3', label: 'Third Nationality (optional)', required: false, type: 'country' },
+            { key: 'nationality_1', label: getAttributeDisplayName('nationality_1'), required: true, type: 'country' },
+            { key: 'nationality_2', label: getAttributeDisplayName('nationality_2') + ' (optional)', required: false, type: 'country' },
+            { key: 'nationality_3', label: getAttributeDisplayName('nationality_3') + ' (optional)', required: false, type: 'country' },
         ]
     },
     {

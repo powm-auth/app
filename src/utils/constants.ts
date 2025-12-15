@@ -31,3 +31,21 @@ export const BREAKPOINTS = {
   large: 1024,
   xlarge: 1440,
 } as const;
+
+/**
+ * Display names for identity attributes
+ * NOTE: The order of keys here determines the display order in the app.
+ */
+export const ATTRIBUTE_DISPLAY_NAMES: Record<string, string> = {
+  'anonymous_id': 'Anonymous Unique ID',
+  'first_name': 'First Name',
+  'last_name': 'Last Name',
+  'date_of_birth': 'Date of Birth',
+  'age_over_18': 'Age Over 18',
+  'age_over_21': 'Age Over 21',
+  'nationality_1': 'Nationality 1',
+  'nationality_2': 'Nationality 2',
+  'nationality_3': 'Nationality 3',
+  'gender': 'Gender',
+  'birth_country': 'Birth Country',
+};
