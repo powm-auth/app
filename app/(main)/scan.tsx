@@ -1,8 +1,8 @@
 import { CloseButton, LoadingOverlay, PowmText } from '@/components';
 import { CameraPermissionGuard } from '@/components/scanner/CameraPermissionGuard';
 import { ScannerOverlay } from '@/components/scanner/ScannerOverlay';
-import { claimChallenge, getCurrentWallet, parseChallengeId } from '@/services/wallet-service';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
+import { claimChallenge, getCurrentWallet, parseChallengeId } from '@/wallet/service';
 import { CameraView } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';

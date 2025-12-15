@@ -50,6 +50,7 @@ export default function RootLayout() {
             },
             gestureEnabled: false,
             animation: 'fade',
+            animationDuration: 150,
           }}
         >
           <Stack.Screen name="startup" options={{ animation: 'fade' }} />

@@ -1,6 +1,6 @@
-import { getAttributeDisplayName } from '@/services/wallet-service';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { ANONYMOUS_ID_INFO_MESSAGE, ANONYMOUS_ID_INFO_TITLE } from '@/utils/constants';
+import { getAttributeDisplayName } from '@/wallet/service';
 import React from 'react';
 import { Alert, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { PowmIcon } from './PowmIcon';

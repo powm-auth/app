@@ -1,19 +1,21 @@
 import { PowmIcon } from '@/components';
 import { PowmText } from '@/components/ui';
-import { loadCurrentWallet } from '@/services/wallet-service';
-import { hasWallet, isSecureStorageAvailable } from '@/services/wallet-storage';
 import { powmColors } from '@/theme/powm-tokens';
+import { loadCurrentWallet } from '@/wallet/service';
+import { hasWallet, isSecureStorageAvailable } from '@/wallet/storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Animated, StatusBar, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, AppState, StatusBar, StyleSheet, View } from 'react-native';
 
 export default function StartupScreen() {
     const router = useRouter();
-    const fadeAnim = React.useRef(new Animated.Value(0)).current;
-    const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
-    const hasNavigated = React.useRef(false);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.8)).current;
+    const hasNavigated = useRef(false);
+    const needsAuth = useRef(false);
     const [storageError, setStorageError] = useState(false);
+    const [authError, setAuthError] = useState(false);
 
     useEffect(() => {
         // Check secure storage and wallet existence
@@ -43,19 +45,30 @@ export default function StartupScreen() {
 
                 // Attempt authentication (biometrics or device lock screen)
                 let authenticated = false;
-                while (!authenticated) {
+                while (!authenticated && !hasNavigated.current) {
                     const result = await LocalAuthentication.authenticateAsync();
 
                     if (result.success) {
                         authenticated = true;
+                        needsAuth.current = false;
                     } else if (result.error === 'user_cancel') {
                         // User cancelled, retry authentication
                         continue;
+                    } else if (result.error === 'system_cancel') {
+                        // System cancelled (incoming call, app switched, etc.)
+                        // Wait for app to come back to foreground
+                        console.log('[Startup] Authentication cancelled by system, waiting for app focus');
+                        needsAuth.current = true;
+                        return;
                     } else {
                         // Other error, show error screen
                         console.error('[Startup] Authentication failed:', result.error);
-                        setStorageError(true);
-                        return;
+                        //setStorageError(true);
+                        //return;
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        continue;
+                        //setAuthError(true);
+                        //return;
                     }
                 }
 
@@ -82,6 +95,14 @@ export default function StartupScreen() {
 
         checkWallet();
 
+        // Listen for app state changes to retry authentication if needed
+        const subscription = AppState.addEventListener('change', (nextAppState) => {
+            if (nextAppState === 'active' && needsAuth.current && !hasNavigated.current) {
+                console.log('[Startup] App became active, retrying authentication');
+                checkWallet();
+            }
+        });
+
         // Fade in and scale animation
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -96,6 +117,10 @@ export default function StartupScreen() {
                 useNativeDriver: true,
             }),
         ]).start();
+
+        return () => {
+            subscription.remove();
+        };
     }, []);
 
     return (
@@ -113,6 +138,19 @@ export default function StartupScreen() {
                     </PowmText>
                     <PowmText variant="text" style={styles.errorMessage}>
                         Please use a device with secure storage support.
+                    </PowmText>
+                </View>
+            ) : authError ? (
+                <View style={styles.errorContainer}>
+                    <PowmIcon name="powmLogo" size={80} color={powmColors.electricMain} />
+                    <PowmText variant="titleBold" style={styles.errorTitle}>
+                        Authentication Failed
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Unable to authenticate your identity.
+                    </PowmText>
+                    <PowmText variant="text" style={styles.errorMessage}>
+                        Please restart the app and try again.
                     </PowmText>
                 </View>
             ) : (

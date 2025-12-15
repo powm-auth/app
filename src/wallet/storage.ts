@@ -5,8 +5,8 @@
  * - Encrypted file: id, public_key, attributes, metadata (unlimited size)
  */
 
-import { resetAnonymizingKey as resetAnonymizingKeyApi } from '@/services/powm-api';
-import type { Wallet } from '@/types/powm';
+import { resetAnonymizingKey } from '@/sdk-extension';
+import type { Wallet } from '@/sdk-extension/structs';
 import { gcm } from '@noble/ciphers/aes';
 import { signing } from '@powm/sdk-js/crypto';
 import { Buffer } from 'buffer';
@@ -283,38 +283,20 @@ export async function rotateAnonymizingKey(): Promise<boolean> {
             throw new Error('No wallet found - cannot rotate anonymizing key');
         }
 
-        // Generate nonce (32 chars, URL-safe base64)
-        const randomBytes = Crypto.getRandomBytes(32);
-        const nonce = btoa(String.fromCharCode(...randomBytes))
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=/g, '')
-            .substring(0, 32);
-
-        // Get current time in UTC ISO format (matching server format)
-        const time = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
-
-        // Build signing string: time|nonce|wallet_id|
-        const signingString = `${time}|${nonce}|${wallet.id}|`;
-
         // Sign using the wallet's signing key
-        const walletSignature = await withSigningKey((privateKey) => {
-            const dataBytes = Buffer.from(signingString, 'utf-8');
-            const signature = sign(
-                wallet.signing_algorithm,
-                privateKey,
-                dataBytes as any
-            );
-            return Buffer.from(signature).toString('base64');
-        });
+        const signer = async (data: Uint8Array) => {
+            return await withSigningKey((privateKey) => {
+                const signature = sign(
+                    wallet.signing_algorithm,
+                    privateKey,
+                    data as any
+                );
+                return Buffer.from(signature).toString('base64');
+            });
+        };
 
         // Call server API to reset the anonymizing key
-        const response = await resetAnonymizingKeyApi({
-            time,
-            nonce,
-            wallet_id: wallet.id,
-            wallet_signature: walletSignature,
-        });
+        const response = await resetAnonymizingKey(wallet.id, signer);
 
         // Store the new key from server
         const newKeyB64 = response.anonymizing_key;

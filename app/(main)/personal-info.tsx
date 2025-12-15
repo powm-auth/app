@@ -7,10 +7,10 @@ import {
   PowmText,
   ScreenHeader
 } from '@/components';
-import { getAttributeDisplayName, refreshAgeAttributes, sortAttributeKeys } from '@/services/wallet-service';
-import { loadWallet } from '@/services/wallet-storage';
 import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
+import { getAttributeDisplayName, refreshAgeAttributes, sortAttributeKeys } from '@/wallet/service';
+import { loadWallet } from '@/wallet/storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';

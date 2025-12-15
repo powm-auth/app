@@ -7,8 +7,8 @@ import {
 } from '@/components';
 import { Notification, NotificationPanel } from '@/components/NotificationPanel';
 import { ScannerCard } from '@/components/home/ScannerCard';
-import { getCurrentWallet } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { getCurrentWallet } from '@/wallet/service';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';

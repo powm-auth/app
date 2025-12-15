@@ -1,6 +1,6 @@
 import { FootBar } from '@/components';
-import { getCurrentWallet } from '@/services/wallet-service';
 import { powmColors } from '@/theme/powm-tokens';
+import { getCurrentWallet } from '@/wallet/service';
 import { NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
@@ -10,12 +10,14 @@ import { StyleSheet, View } from 'react-native';
 const featureScreenOptions: NativeStackNavigationOptions = {
   animation: 'slide_from_right',
   gestureEnabled: true,
+  animationDuration: 200,
 };
 
 const modalScreenOptions: NativeStackNavigationOptions = {
   animation: 'slide_from_bottom',
   presentation: 'modal',
   gestureEnabled: true,
+  animationDuration: 200,
 };
 
 export default function AppLayout() {
@@ -41,6 +43,7 @@ export default function AppLayout() {
             },
             gestureEnabled: false,
             animation: 'fade',
+            animationDuration: 150,
           }}
         >
           <Stack.Screen name="home" />
@@ -63,6 +66,7 @@ export default function AppLayout() {
               presentation: 'fullScreenModal',
               gestureEnabled: false,
               animation: 'fade',
+              animationDuration: 150,
             }}
           />
 

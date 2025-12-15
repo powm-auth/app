@@ -10,8 +10,8 @@ import {
   Row,
   ScreenHeader,
 } from '@/components';
-import { deleteWallet } from '@/services/wallet-storage';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
+import { deleteWallet } from '@/wallet/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';

@@ -1,13 +1,4 @@
 /**
- * Common animation durations (in milliseconds)
- */
-export const ANIMATION_DURATION = {
-  fast: 150,
-  normal: 300,
-  slow: 500,
-} as const;
-
-/**
  * Screen breakpoints for responsive design
  */
 export const BREAKPOINTS = {

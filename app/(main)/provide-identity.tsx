@@ -7,14 +7,14 @@ import {
   LoadingOverlay,
   PowmText
 } from '@/components';
+import type { ClaimChallengeResponse } from '@/sdk-extension/structs';
+import { powmColors, powmSpacing } from '@/theme/powm-tokens';
 import {
   acceptChallenge,
   getCurrentWallet,
   rejectChallenge,
   sortAttributeKeys
-} from '@/services/wallet-service';
-import { powmColors, powmSpacing } from '@/theme/powm-tokens';
-import type { ClaimChallengeResponse } from '@/types/powm';
+} from '@/wallet/service';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';

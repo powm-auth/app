@@ -10,9 +10,9 @@ import {
   Row,
   ScreenHeader,
 } from '@/components';
-import { deleteWallet, rotateAnonymizingKey } from '@/services/wallet-storage';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { ANONYMOUS_ID_INFO_MESSAGE, ANONYMOUS_ID_INFO_TITLE } from '@/utils/constants';
+import { deleteWallet, rotateAnonymizingKey } from '@/wallet/storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';

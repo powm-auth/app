@@ -10,9 +10,9 @@ import {
     Row,
     Toggle
 } from '@/components';
-import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge, sortAttributeKeys } from '@/services/wallet-service';
 import { powmColors, powmRadii, powmSpacing } from '@/theme/powm-tokens';
 import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
+import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge, sortAttributeKeys } from '@/wallet/service';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
