@@ -64,7 +64,7 @@ export default function MyDataScreen() {
         let wallet = getCurrentWallet();
         if (!wallet) {
           // Import dynamically to avoid circular dependencies if any, or just use the imported one
-          const { loadWallet } = require('@/wallet/storage');
+          const { loadWallet } = await import('@/wallet/storage');
           wallet = await loadWallet();
         }
 

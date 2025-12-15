@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: powmColors.border,
+        backgroundColor: powmColors.glass.border,
         width: '100%',
         opacity: 0.3,
         marginVertical: 4,

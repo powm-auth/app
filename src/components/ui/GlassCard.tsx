@@ -1,30 +1,30 @@
 import { powmColors, powmRadii } from '@/theme/powm-tokens';
 import React from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface GlassCardProps {
   children: React.ReactNode;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'danger';
   padding?: number;
   transparent?: boolean; // ✅ NEW PROP
 }
 
-export const GlassCard: React.FC<GlassCardProps> = ({ 
-  children, 
-  onPress, 
+export const GlassCard: React.FC<GlassCardProps> = ({
+  children,
+  onPress,
   style,
   variant = 'default',
   padding = 16,
   transparent = false // Default to false (standard glass background)
 }) => {
-  const cardStyles: ViewStyle[] = [
+  const cardStyles: StyleProp<ViewStyle> = [
     styles.container,
-    { 
+    {
       padding,
       // If transparent is true, override background to transparent
-      backgroundColor: transparent ? 'transparent' : powmColors.glass.background 
+      backgroundColor: transparent ? 'transparent' : powmColors.glass.background
     },
     variant === 'danger' && styles.dangerBorder,
     style
@@ -32,7 +32,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
 
   if (onPress) {
     return (
-      <Pressable 
+      <Pressable
         onPress={onPress}
         style={({ pressed }) => [
           ...cardStyles,
