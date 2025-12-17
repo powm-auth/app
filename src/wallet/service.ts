@@ -288,6 +288,9 @@ export async function refreshAgeAttributes(): Promise<void> {
     const dateOfBirth = wallet.attributes['date_of_birth']?.value;
     if (!dateOfBirth) throw new Error('Date of birth not set in wallet');
 
+    const dateOfBirthSalt = wallet.attributes['date_of_birth']?.salt;
+    if (!dateOfBirthSalt) throw new Error('Date of birth salt not set in wallet');
+
     const signer = async (data: Uint8Array) => {
         return await withSigningKey((privateKey) => {
             const signature = sign(
@@ -303,6 +306,7 @@ export async function refreshAgeAttributes(): Promise<void> {
     const response = await checkAge(
         wallet.id,
         dateOfBirth,
+        dateOfBirthSalt,
         signer
     );
 

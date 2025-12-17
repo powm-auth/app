@@ -8,6 +8,7 @@ import { fetchWithTimeout } from './utils';
 export async function checkAge(
     walletId: string,
     dateOfBirth: string,
+    dateOfBirthSalt: string,
     signer: Signer
 ): Promise<{
     wallet_id: string;
@@ -21,7 +22,7 @@ export async function checkAge(
         .replace(/=/g, '')
         .substring(0, 32);
 
-    const signingString = `v1/wallets/check-age|${time}|${nonce}|${walletId}|${dateOfBirth}|`;
+    const signingString = `v1/wallets/check-age|${time}|${nonce}|${walletId}|${dateOfBirth}|${dateOfBirthSalt}|`;
     const walletSignature = await signer(Buffer.from(signingString, 'utf-8'));
 
     const request = {
@@ -29,6 +30,7 @@ export async function checkAge(
         nonce,
         wallet_id: walletId,
         date_of_birth: dateOfBirth,
+        date_of_birth_salt: dateOfBirthSalt,
         wallet_signature: walletSignature,
     };
 

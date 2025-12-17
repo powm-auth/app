@@ -4,6 +4,7 @@ import {
     Button,
     CloseButton,
     Column,
+    EncryptionInfo,
     GlassCard,
     PowmIcon,
     PowmText,
@@ -15,8 +16,10 @@ import { ATTRIBUTE_DEFINITIONS } from '@/utils/constants';
 import { createWalletChallenge, getAttributeDisplayName, getCurrentWallet, pollChallenge, sortAttributeKeys } from '@/wallet/service';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, ScrollView, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+
+const screenWidth = Dimensions.get('window').width;
 
 export default function RequestIdentityScreen() {
     const router = useRouter();
@@ -155,7 +158,7 @@ export default function RequestIdentityScreen() {
 
                 <ScrollView
                     style={styles.scrollView}
-                    contentContainerStyle={styles.content}
+                    contentContainerStyle={[styles.content, (stage === 'error' || stage === 'completed' || stage === 'polling') && { flexGrow: 1 }]}
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Title */}
@@ -210,92 +213,110 @@ export default function RequestIdentityScreen() {
                     )}
 
                     {stage === 'polling' && challengeId && (
-                        <Column align="center" gap={powmSpacing.lg}>
-                            <PowmText variant="text" color={powmColors.inactive} align="center">
-                                Share this QR code with the person you want to verify
-                            </PowmText>
-
-                            <View style={styles.qrContainer}>
-                                <QRCode value={`powm://${challengeId}`} size={220} />
-                            </View>
-
-                            {/* Timer */}
-                            <GlassCard padding={powmSpacing.md} style={{ width: '100%' }}>
-                                <Row justify="space-between" align="center">
-                                    <Row gap={8} align="center">
-                                        <PowmIcon name="clock" size={20} color={powmColors.electricMain} />
-                                        <PowmText variant="text">Time Remaining</PowmText>
-                                    </Row>
-                                    <PowmText variant="subtitleSemiBold" color={timeRemaining < 60 ? powmColors.deletionRedMain : powmColors.electricMain}>
-                                        {formatTime(timeRemaining)}
-                                    </PowmText>
-                                </Row>
-                            </GlassCard>
-
-                            {/* Requested Attributes */}
-                            <PowmText variant="text" align="center" style={{ paddingHorizontal: powmSpacing.lg }}>
-                                <PowmText color={powmColors.inactive}>Requesting: </PowmText>
-                                <PowmText color={powmColors.gray}>
-                                    {sortAttributeKeys(selectedAttributes).map(attr => getAttributeDisplayName(attr)).join(', ')}
+                        <>
+                            <Column align="center" gap={powmSpacing.lg}>
+                                <PowmText variant="text" color={powmColors.inactive} align="center">
+                                    Share this QR code with the person you want to verify
                                 </PowmText>
-                            </PowmText>
 
-                            {/* Status */}
-                            <Row gap={8} align="center">
-                                <ActivityIndicator color={powmColors.electricMain} />
-                                <PowmText variant="text">Waiting for response...</PowmText>
-                            </Row>
+                                <View style={styles.qrContainer}>
+                                    <QRCode value={`powm://${challengeId}`} size={screenWidth - (powmSpacing.lg * 2) - (powmSpacing.lg * 6)} />
+                                </View>
+
+                                {/* Timer */}
+                                <GlassCard padding={powmSpacing.md} style={{ width: '100%' }}>
+                                    <Row justify="space-between" align="center">
+                                        <Row gap={8} align="center">
+                                            <PowmIcon name="clock" size={20} color={powmColors.electricMain} />
+                                            <PowmText variant="text">Time Remaining</PowmText>
+                                        </Row>
+                                        <PowmText variant="subtitleSemiBold" color={timeRemaining < 60 ? powmColors.deletionRedMain : powmColors.electricMain}>
+                                            {formatTime(timeRemaining)}
+                                        </PowmText>
+                                    </Row>
+                                </GlassCard>
+
+                                {/* Requested Attributes */}
+                                <PowmText variant="text" align="center" style={{ paddingHorizontal: powmSpacing.lg }}>
+                                    <PowmText color={powmColors.inactive}>Requesting: </PowmText>
+                                    <PowmText color={powmColors.gray}>
+                                        {sortAttributeKeys(selectedAttributes).map(attr => getAttributeDisplayName(attr)).join(', ')}
+                                    </PowmText>
+                                </PowmText>
+
+                                {/* Status */}
+                                <Row gap={8} align="center">
+                                    <ActivityIndicator color={powmColors.electricMain} />
+                                    <PowmText variant="text">Waiting for response...</PowmText>
+                                </Row>
+                            </Column>
+
+                            <View style={{ flex: 1 }} />
 
                             <Button
                                 title="Cancel"
                                 variant="secondary"
                                 onPress={() => router.back()}
-                                style={{ width: '100%', marginTop: powmSpacing.md }}
+                                style={{ width: '100%', marginBottom: powmSpacing.lg }}
                             />
-                        </Column>
+                        </>
                     )}
 
                     {stage === 'completed' && identityData && (
-                        <Column align="center" gap={powmSpacing.lg}>
-                            <View style={styles.successIcon}>
-                                <PowmIcon name="check" color={powmColors.successGreen} size={64} />
-                            </View>
-                            <PowmText variant="title" color={powmColors.successGreen}>
-                                Identity Obtained!
-                            </PowmText>
+                        <>
+                            <Column align="center" gap={powmSpacing.lg}>
+                                <View style={styles.successIcon}>
+                                    <PowmIcon name="check" color={powmColors.successGreen} size={48} />
+                                </View>
 
-                            <GlassCard padding={powmSpacing.lg} style={{ width: '100%' }}>
-                                <AttributeList
-                                    title="Verified Information"
-                                    attributes={sortAttributeKeys(Object.keys(identityData.attributes || {})).map(key => ({
-                                        key,
-                                        value: identityData.attributes[key],
-                                        isAvailable: true
-                                    }))}
-                                />
-                            </GlassCard>
+                                <GlassCard padding={powmSpacing.lg} style={{ width: '100%', marginTop: powmSpacing.md }}>
+                                    <ScrollView style={{ maxHeight: 450 }} showsVerticalScrollIndicator={false}>
+                                        <Column gap={powmSpacing.md}>
+                                            <AttributeList
+                                                title="Received Information"
+                                                attributes={sortAttributeKeys(Object.keys(identityData.attributes || {})).map(key => ({
+                                                    key,
+                                                    value: identityData.attributes[key],
+                                                    isAvailable: true
+                                                }))}
+                                            />
+
+                                            <EncryptionInfo
+                                                encryptionScheme={challengeData?.encrypting_scheme}
+                                                variant="receiving"
+                                            />
+                                        </Column>
+                                    </ScrollView>
+                                </GlassCard>
+                            </Column>
+
+                            <View style={{ flex: 1 }} />
 
                             <Button
                                 title="Done"
                                 onPress={() => router.back()}
-                                style={{ width: '100%', marginTop: powmSpacing.md }}
+                                style={{ width: '100%', marginBottom: powmSpacing.lg }}
                             />
-                        </Column>
+                        </>
                     )}
 
                     {stage === 'error' && (
-                        <Column align="center" gap={powmSpacing.lg}>
-                            <View style={styles.errorIcon}>
-                                <PowmIcon name="cross" color={powmColors.deletionRedMain} size={48} />
-                            </View>
-                            <PowmText variant="title" color={powmColors.deletionRedMain}>
-                                Request Failed
-                            </PowmText>
-                            <PowmText variant="text" color={powmColors.inactive} align="center">
-                                {errorMessage}
-                            </PowmText>
+                        <>
+                            <Column align="center" gap={powmSpacing.lg}>
+                                <View style={styles.errorIcon}>
+                                    <PowmIcon name="cross" color={powmColors.deletionRedMain} size={48} />
+                                </View>
+                                <PowmText variant="title" color={powmColors.deletionRedMain}>
+                                    Request Failed
+                                </PowmText>
+                                <PowmText variant="text" color={powmColors.inactive} align="center">
+                                    {errorMessage}
+                                </PowmText>
+                            </Column>
 
-                            <Row gap={powmSpacing.md} style={{ width: '100%' }}>
+                            <View style={{ flex: 1 }} />
+
+                            <Row gap={powmSpacing.md} style={{ width: '100%', marginBottom: powmSpacing.lg }}>
                                 <Button
                                     title="Back"
                                     variant="secondary"
@@ -308,7 +329,7 @@ export default function RequestIdentityScreen() {
                                     style={{ flex: 1 }}
                                 />
                             </Row>
-                        </Column>
+                        </>
                     )}
                 </ScrollView>
             </View>
@@ -339,7 +360,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(76, 217, 100, 0.15)',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: powmSpacing.xl,
+        marginTop: powmSpacing.md,
     },
     errorIcon: {
         width: 80,

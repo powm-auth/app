@@ -3,6 +3,7 @@ import {
   BackgroundImage,
   Button,
   Column,
+  EncryptionInfo,
   GlassCard,
   LoadingOverlay,
   PowmText
@@ -18,21 +19,8 @@ import {
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const getEncryptionSchemeName = (scheme: string) => {
-  switch (scheme) {
-    case 'ecdhx25519_hkdfsha256_aes256gcm':
-      return 'X25519 (Modern High-Performance)';
-    case 'ecdhp256_hkdfsha256_aes256gcm':
-      return 'P-256 (NIST Standard)';
-    case 'ecdhp384_hkdfsha384_aes256gcm':
-      return 'P-384 (High Security)';
-    default:
-      return scheme;
-  }
-};
 
 export default function ValidateIdentityScreen() {
   const router = useRouter();
@@ -114,33 +102,14 @@ export default function ValidateIdentityScreen() {
                   }))}
                 />
 
-                <View style={{ marginTop: powmSpacing.lg }}>
-                  <PowmText variant="text" color={powmColors.inactive} style={styles.descriptionText}>
-                    🔒 <PowmText variant="text" color={powmColors.electricMain}>End-to-end encrypted</PowmText> - This data goes directly to {appName}. Powm never sees it.{' '}
-                    <Text
-                      style={{ color: powmColors.electricMain, textDecorationLine: 'underline' }}
-                      onPress={() => {
-                        Alert.alert(
-                          'How Powm Works',
-                          `Your identity is end-to-end encrypted between you and ${appName}.\n\n` +
-                          '✅ Powm never sees this data\n\n' +
-                          `✅ Powm only provides a cryptographic checksum (hash) of your identity to ${appName}\n\n` +
-                          `✅ This checksum allows ${appName} to prove authenticity on their end\n\n` +
-                          `${appName} can verify your identity is real, but Powm cannot see what data was shared.`
-                        );
-                      }}
-                    >
-                      Learn more
-                    </Text>
-                  </PowmText>
-                </View>
+                <EncryptionInfo
+                  appName={appName}
+                  encryptionScheme={claimResponse.challenge.encrypting_scheme}
+                  variant="sending"
+                />
 
                 <PowmText variant="text" color={powmColors.gray} style={[styles.descriptionText, { marginTop: powmSpacing.md }]}>
                   Do you accept to share this information with <PowmText variant="text" color={powmColors.electricMain}>{appName}</PowmText>?
-                </PowmText>
-
-                <PowmText variant="text" color={powmColors.inactive} style={{ fontSize: 11, marginTop: powmSpacing.sm, textAlign: 'right' }}>
-                  Encryption: {getEncryptionSchemeName(claimResponse.challenge.encrypting_scheme)}
                 </PowmText>
               </Column>
             </ScrollView>
