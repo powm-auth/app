@@ -132,8 +132,11 @@ export async function acceptIdentityChallenge(
     const identityHash = hash(hashingScheme, challengeIdBytes as any, combinedHashes as any);
     const identityHashB64 = btoa(String.fromCharCode(...(identityHash as any)));
 
-    // Encrypt the attribute payload
-    const payloadJson = JSON.stringify({ attributes: attributePayload });
+    // Encrypt the attribute payload with random padding (0-512 bytes) to prevent size-based pattern matching
+    const payloadJson = JSON.stringify({
+        attributes: attributePayload,
+        padding: btoa(String.fromCharCode(...Crypto.getRandomBytes(Math.floor(Math.random() * 513))))
+    });
     const payloadBytes = new TextEncoder().encode(payloadJson);
 
     const encryptingScheme = claimResponse.challenge.encrypting_scheme;
@@ -152,6 +155,7 @@ export async function acceptIdentityChallenge(
         ephemeralKeys.privateKeyPkcs8Der,
         appPublicKeyDer,
         Buffer.from(payloadBytes),
+        Buffer.from(challengeId),
         undefined
     );
 
