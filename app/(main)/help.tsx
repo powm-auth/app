@@ -87,27 +87,31 @@ export default function HelpScreen() {
   const faqs = [
     {
       question: "What is Powm?",
-      answer: "Powm is your secure digital identity wallet. It allows you to prove who you are (age, name, etc.) without revealing sensitive documents or unnecessary personal data to third parties."
+      answer: "Powm is a digital wallet for your identity. It lets you prove who you are (like your age or name) to apps and people without sharing unnecessary personal details."
     },
     {
-      question: "How is my data stored?",
-      answer: "Your data is stored locally on your device, encrypted with military-grade security. Powm servers do not hold your personal documents or identity information. You are the only owner of your data."
+      question: "Is my data safe?",
+      answer: "Yes. Your data lives on your phone, not on our servers. It is encrypted so only you can access it. When you share information, it is sent securely so that only the recipient can read it."
     },
     {
-      question: "What is 'Double Anonymat'?",
-      answer: "Double anonymity means that when you prove your identity to a service (like verifying age for Instagram), neither the service knows who you are (just that you are +18), nor does Powm know which service you are verifying with."
+      question: "Can Powm see my data?",
+      answer: "We cannot see your sensitive details like your name or date of birth. Non-sensitive data (like gender) uses privacy-enhancing techniques to prevent tracking."
     },
     {
-      question: "How do ID Tickets work?",
-      answer: "ID Tickets are one-time-use secure proofs. You generate a ticket (e.g., 'Proof of Age'), and a third party scans it to verify the claim. Once used or expired (24h), the ticket becomes invalid."
+      question: "How do I share my identity?",
+      answer: "You can scan a QR code from an app, website, or another person's phone. You will see exactly what information they are asking for. If you approve, your wallet sends only that specific information securely."
+    },
+    {
+      question: "Can I prove my age without showing my birthday?",
+      answer: "Yes. You can request or be requested to only share your 18+ or 21+ status without ever revealing your actual date of birth."
     },
     {
       question: "What if I lose my phone?",
-      answer: "Since data is stored locally, losing your phone means losing your data unless you have set up a recovery method. You can use your 'Crypto Codes' or an encrypted cloud backup to restore your identity on a new device."
+      answer: "Since your data is only on your phone, you will need your recovery phrase to restore your wallet on a new device. Make sure to keep your recovery phrase safe and offline."
     },
     {
-      question: "Is my history shared?",
-      answer: "No. Your activity history is stored strictly on your device for your own reference. You can delete it at any time from the History page."
+      question: "Can I delete my history?",
+      answer: "Yes. Your history is stored only on your phone for your own reference. You can delete any item or clear your entire history whenever you want."
     }
   ];
 
