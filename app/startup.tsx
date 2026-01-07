@@ -115,7 +115,6 @@ export default function StartupScreen() {
 
                         // Update wallet with the new identity attributes
                         wallet.identity_attributes = consumeResult.identity_attributes;
-                        wallet.identity_attribute_hashing_scheme = consumeResult.identity_attribute_hashing_scheme;
 
                         // Save the updated wallet
                         await updateWalletFile(wallet);

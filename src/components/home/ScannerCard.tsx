@@ -73,7 +73,7 @@ export const ScannerCard: React.FC<ScannerCardProps> = ({ onPress }) => {
               Scan QR Code
             </PowmText>
             <PowmText variant="text" color="#c0a0e0" align="center">
-              Scan a request to securely share your verified information.
+              Scan to securely share your information.
             </PowmText>
 
             <View style={styles.iconContainer}>

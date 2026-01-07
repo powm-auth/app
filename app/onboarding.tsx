@@ -579,7 +579,7 @@ export default function OnboardingScreen() {
                 created_at: new Date(), // this is ok because timestamp is passed in request, so server approves it 
                 updated_at: null,
                 signing_algorithm: 'EcdsaP256_Sha256',
-                identity_attribute_hashing_scheme: null,
+                identity_attribute_hashing_scheme: serverResponse.identity_attribute_hashing_scheme,
                 identity_attributes: null, // Assume attributes are null at first until verification
                 anonymizing_hashing_scheme: serverResponse.anonymizing_hashing_scheme,
                 user_details: {

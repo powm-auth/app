@@ -12,7 +12,7 @@ export interface Wallet {
     updated_at: Date | null;
     public_key: Buffer; // SPKI DER
     signing_algorithm: string;
-    identity_attribute_hashing_scheme: string | null;
+    identity_attribute_hashing_scheme: string;
     anonymizing_hashing_scheme: string;
     identity_attributes: Record<string, { value: string; salt: string }> | null;
     user_details?: {
@@ -110,7 +110,6 @@ export interface ConsumeIdentityVerificationRequest {
 export interface ConsumeIdentityVerificationResponse {
     wallet_id: string;
     identity_attributes: Record<string, { value: string; salt: string }>;
-    identity_attribute_hashing_scheme: string;
 }
 
 // Error types and classes

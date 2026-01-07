@@ -10,6 +10,7 @@ export async function onboardWallet(request: {
     wallet_id: string;
     anonymizing_key: string;
     anonymizing_hashing_scheme: string;
+    identity_attribute_hashing_scheme: string;
 }> {
     const requestBody = {
         signing_scheme: request.signing_scheme,
